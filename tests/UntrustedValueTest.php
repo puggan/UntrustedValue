@@ -7,6 +7,7 @@ namespace Puggan\UntrustedValue\Tests;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedValue;
+use Puggan\UntrustedValue\WrongTypeException;
 
 final class UntrustedValueTest extends TestCase
 {
@@ -42,5 +43,33 @@ final class UntrustedValueTest extends TestCase
     public function testValueIsReadonly(): void
     {
         self::assertTrue(new \ReflectionProperty(UntrustedValue::class, 'value')->isReadOnly());
+    }
+
+    public function testFromJsonDecodesObjectsToStdClass(): void
+    {
+        $value = UntrustedValue::fromJson('{"user":{"age":42,"tags":["a","b"]}}')->value;
+
+        self::assertInstanceOf(\stdClass::class, $value);
+        self::assertEquals((object) ['user' => (object) ['age' => 42, 'tags' => ['a', 'b']]], $value);
+    }
+
+    public function testFromJsonDecodesScalars(): void
+    {
+        self::assertSame('text', UntrustedValue::fromJson('"text"')->value);
+        self::assertNull(UntrustedValue::fromJson('null')->value);
+    }
+
+    public function testFromJsonWrapsInvalidJsonInWrongTypeException(): void
+    {
+        try {
+            UntrustedValue::fromJson('{"broken":');
+            self::fail('Expected a WrongTypeException');
+        } catch (WrongTypeException $exception) {
+            self::assertSame('json', $exception->expectedType);
+            self::assertSame('string', $exception->givenType);
+            self::assertSame('', $exception->path);
+            self::assertInstanceOf(\JsonException::class, $exception->getPrevious());
+            self::assertStringStartsWith('Invalid JSON: ', $exception->getMessage());
+        }
     }
 }
