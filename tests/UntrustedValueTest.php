@@ -72,4 +72,24 @@ final class UntrustedValueTest extends TestCase
             self::assertStringStartsWith('Invalid JSON: ', $exception->getMessage());
         }
     }
+
+    public function testPathDefaultsToEmpty(): void
+    {
+        self::assertSame('', new UntrustedValue(42)->path);
+    }
+
+    public function testKeepsThePath(): void
+    {
+        self::assertSame('user.age', new UntrustedValue(42, 'user.age')->path);
+    }
+
+    public function testPathIsReadonly(): void
+    {
+        self::assertTrue(new \ReflectionProperty(UntrustedValue::class, 'path')->isReadOnly());
+    }
+
+    public function testFromJsonStartsAtTheRootPath(): void
+    {
+        self::assertSame('', UntrustedValue::fromJson('{}')->path);
+    }
 }

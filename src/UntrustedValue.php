@@ -12,9 +12,11 @@ final class UntrustedValue implements \JsonSerializable
 {
     /**
      * @param mixed $value The raw value from the untrusted source.
+     * @param string $path Where in the input the value was found, e.g. "user.age". Empty for the root.
      */
     public function __construct(
         public readonly mixed $value,
+        public readonly string $path = '',
     ) {}
 
     /**
