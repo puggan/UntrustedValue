@@ -98,8 +98,8 @@ final class UntrustedValueFloatTest extends TestCase
 
     public function testNullIsAllowedByDefault(): void
     {
-        self::assertNull(new UntrustedValue(null)->float());
-        self::assertNull(new UntrustedValue(null)->float(strict: true));
+        self::assertNull(UntrustedValue::fromJson('null')->float());
+        self::assertNull(UntrustedValue::fromJson('null')->float(strict: true));
     }
 
     public function testNullIsRejectedWhenNotNullable(): void

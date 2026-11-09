@@ -87,8 +87,8 @@ final class UntrustedValueStringTest extends TestCase
 
     public function testNullIsAllowedByDefault(): void
     {
-        self::assertNull(new UntrustedValue(null)->string());
-        self::assertNull(new UntrustedValue(null)->string(strict: true));
+        self::assertNull(UntrustedValue::fromJson('null')->string());
+        self::assertNull(UntrustedValue::fromJson('null')->string(strict: true));
     }
 
     public function testNullIsRejectedWhenNotNullable(): void

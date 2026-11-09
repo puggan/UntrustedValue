@@ -109,8 +109,8 @@ final class UntrustedValueIntTest extends TestCase
 
     public function testNullIsAllowedByDefault(): void
     {
-        self::assertNull(new UntrustedValue(null)->int());
-        self::assertNull(new UntrustedValue(null)->int(strict: true));
+        self::assertNull(UntrustedValue::fromJson('null')->int());
+        self::assertNull(UntrustedValue::fromJson('null')->int(strict: true));
     }
 
     public function testNullIsRejectedWhenNotNullable(): void

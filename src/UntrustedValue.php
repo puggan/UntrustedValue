@@ -65,9 +65,17 @@ final class UntrustedValue implements \JsonSerializable
      *   following the same rule once it is read as a number.
      * Either way the result has to fit in an int.
      *
-     * When TValue is already an int type, that type is returned as is.
+     * The return type follows TValue where it can: strict mode gives int&TValue (or ?int&TValue when
+     * nullable), a TValue that is already an int (or ?int when nullable) is returned as is, and
+     * otherwise the result is int, or ?int when null is both allowed and possible.
      *
-     * @return (TValue is int ? TValue : ($nullable is false ? int : ?int))
+     * @return (
+     *     $strict is true
+     *     ? ($nullable is false ? int&TValue : (int|null)&TValue)
+     *     : ($nullable is false
+     *         ? (TValue is int ? TValue : int)
+     *         : (TValue is int|null ? TValue : (TValue is scalar|array|object|resource ? int : int|null)))
+     * )
      *
      * @throws WrongTypeException When the value is not an int, or null when allowed, and cannot be converted.
      */
@@ -117,9 +125,15 @@ final class UntrustedValue implements \JsonSerializable
      * Strict mode ($strict, or the constructor's $strict when null) accepts nothing else. Otherwise a numeric string (see is_numeric()), like "4.2",
      * " 4.2" or "1e3", is converted too, as long as it gives a finite float.
      *
-     * When TValue is already a float type, that type is returned as is, and an int TValue gives a float.
+     * The return type follows TValue where it can: a TValue that is already a float (or ?float when
+     * nullable) is returned as is, and otherwise the result is float, or ?float when null is both
+     * allowed and possible. Strict mode isn't narrowed further, as it still accepts ints.
      *
-     * @return (TValue is float ? TValue : (TValue is int ? float : ($nullable is false ? float : ?float)))
+     * @return (
+     *     $nullable is false
+     *     ? (TValue is float ? TValue : float)
+     *     : (TValue is float|null ? TValue : (TValue is scalar|array|object|resource ? float : float|null))
+     * )
      *
      * @throws WrongTypeException When the value is not a float, or null when allowed, and cannot be converted.
      */
@@ -172,9 +186,18 @@ final class UntrustedValue implements \JsonSerializable
      * Strict mode ($strict, or the constructor's $strict when null) only accepts a string. Otherwise an int, or a finite float, is converted too,
      * the way PHP casts it, like "42", "4.2" or "1.0E+25". Bools are never converted.
      *
-     * When TValue is already a string type, that type is returned as is.
+     * The return type follows TValue where it can: strict mode gives string&TValue (or
+     * ?string&TValue when nullable), a TValue that is already a string (or ?string when nullable) is
+     * returned as is, and otherwise the result is string, or ?string when null is both allowed and
+     * possible.
      *
-     * @return (TValue is string ? TValue : ($nullable is false ? string : ?string))
+     * @return (
+     *     $strict is true
+     *     ? ($nullable is false ? string&TValue : (string|null)&TValue)
+     *     : ($nullable is false
+     *         ? (TValue is string ? TValue : string)
+     *         : (TValue is string|null ? TValue : (TValue is scalar|array|object|resource ? string : string|null)))
+     * )
      *
      * @throws WrongTypeException When the value is not a string, or null when allowed, and cannot be converted.
      */
