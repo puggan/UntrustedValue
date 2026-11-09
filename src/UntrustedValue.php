@@ -200,6 +200,48 @@ final class UntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Whether int() with the same arguments would return an int instead of throwing.
+     */
+    public function isInt(bool $nullable = true, ?bool $strict = null): bool
+    {
+        try {
+            $this->int($nullable, $strict);
+
+            return true;
+        } catch (WrongTypeException) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether float() with the same arguments would return a float instead of throwing.
+     */
+    public function isFloat(bool $nullable = true, ?bool $strict = null): bool
+    {
+        try {
+            $this->float($nullable, $strict);
+
+            return true;
+        } catch (WrongTypeException) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether string() with the same arguments would return a string instead of throwing.
+     */
+    public function isString(bool $nullable = true, ?bool $strict = null): bool
+    {
+        try {
+            $this->string($nullable, $strict);
+
+            return true;
+        } catch (WrongTypeException) {
+            return false;
+        }
+    }
+
+    /**
      * Serializes to the raw value, unchanged.
      */
     public function jsonSerialize(): mixed
