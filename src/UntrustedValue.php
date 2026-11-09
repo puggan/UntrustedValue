@@ -65,7 +65,9 @@ final class UntrustedValue implements \JsonSerializable
      *   following the same rule once it is read as a number.
      * Either way the result has to fit in an int.
      *
-     * @return ($nullable is false ? int : ?int)
+     * When TValue is already an int type, that type is returned as is.
+     *
+     * @return (TValue is int ? TValue : ($nullable is false ? int : ?int))
      *
      * @throws WrongTypeException When the value is not an int, or null when allowed, and cannot be converted.
      */
@@ -115,7 +117,9 @@ final class UntrustedValue implements \JsonSerializable
      * Strict mode ($strict, or the constructor's $strict when null) accepts nothing else. Otherwise a numeric string (see is_numeric()), like "4.2",
      * " 4.2" or "1e3", is converted too, as long as it gives a finite float.
      *
-     * @return ($nullable is false ? float : ?float)
+     * When TValue is already a float type, that type is returned as is, and an int TValue gives a float.
+     *
+     * @return (TValue is float ? TValue : (TValue is int ? float : ($nullable is false ? float : ?float)))
      *
      * @throws WrongTypeException When the value is not a float, or null when allowed, and cannot be converted.
      */
@@ -168,7 +172,9 @@ final class UntrustedValue implements \JsonSerializable
      * Strict mode ($strict, or the constructor's $strict when null) only accepts a string. Otherwise an int, or a finite float, is converted too,
      * the way PHP casts it, like "42", "4.2" or "1.0E+25". Bools are never converted.
      *
-     * @return ($nullable is false ? string : ?string)
+     * When TValue is already a string type, that type is returned as is.
+     *
+     * @return (TValue is string ? TValue : ($nullable is false ? string : ?string))
      *
      * @throws WrongTypeException When the value is not a string, or null when allowed, and cannot be converted.
      */
