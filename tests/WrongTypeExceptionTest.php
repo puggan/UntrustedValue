@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Puggan\UntrustedValue\Tests;
 
 use PHPUnit\Framework\TestCase;
+use Puggan\UntrustedValue\UntrustedValueException;
 use Puggan\UntrustedValue\WrongTypeException;
 
 final class WrongTypeExceptionTest extends TestCase
@@ -17,6 +18,11 @@ final class WrongTypeExceptionTest extends TestCase
         self::assertSame('int', $exception->expectedType);
         self::assertSame('string', $exception->givenType);
         self::assertSame('user.age', $exception->path);
+    }
+
+    public function testCanBeCaughtAsUntrustedValueException(): void
+    {
+        self::assertInstanceOf(UntrustedValueException::class, new WrongTypeException('', '', '', ''));
     }
 
     public function testIsARuntimeException(): void

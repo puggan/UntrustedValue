@@ -7,7 +7,7 @@ namespace Puggan\UntrustedValue;
 /**
  * Thrown when an untrusted value has the right type but does not pass a filter.
  */
-class InvalidTypeException extends \RuntimeException implements \JsonSerializable
+class InvalidTypeException extends UntrustedValueException
 {
     /**
      * @param string $message Human-readable description of the error.
@@ -17,10 +17,10 @@ class InvalidTypeException extends \RuntimeException implements \JsonSerializabl
     public function __construct(
         string $message,
         public readonly string $filter,
-        public readonly string $path,
+        string $path,
         ?\Throwable $previous = null,
     ) {
-        parent::__construct($message, 0, $previous);
+        parent::__construct($message, $path, $previous);
     }
 
     /**

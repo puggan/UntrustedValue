@@ -7,7 +7,7 @@ namespace Puggan\UntrustedValue;
 /**
  * Thrown when an untrusted value is not of the expected type.
  */
-class WrongTypeException extends \RuntimeException implements \JsonSerializable
+class WrongTypeException extends UntrustedValueException
 {
     /**
      * @param string $message Human-readable description of the error.
@@ -19,10 +19,10 @@ class WrongTypeException extends \RuntimeException implements \JsonSerializable
         string $message,
         public readonly string $expectedType,
         public readonly string $givenType,
-        public readonly string $path,
+        string $path,
         ?\Throwable $previous = null,
     ) {
-        parent::__construct($message, 0, $previous);
+        parent::__construct($message, $path, $previous);
     }
 
     /**

@@ -6,6 +6,7 @@ namespace Puggan\UntrustedValue\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\InvalidTypeException;
+use Puggan\UntrustedValue\UntrustedValueException;
 
 final class InvalidTypeExceptionTest extends TestCase
 {
@@ -16,6 +17,11 @@ final class InvalidTypeExceptionTest extends TestCase
         self::assertSame('Not an email', $exception->getMessage());
         self::assertSame('email', $exception->filter);
         self::assertSame('user.email', $exception->path);
+    }
+
+    public function testCanBeCaughtAsUntrustedValueException(): void
+    {
+        self::assertInstanceOf(UntrustedValueException::class, new InvalidTypeException('', '', ''));
     }
 
     public function testIsARuntimeException(): void
