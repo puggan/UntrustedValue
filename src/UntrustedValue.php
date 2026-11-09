@@ -7,11 +7,13 @@ namespace Puggan\UntrustedValue;
 /**
  * Wraps a value from an untrusted source, and hands it back as a type-safe value,
  * optionally validated.
+ *
+ * @template TValue The type of the raw value. Only describes what was wrapped, it is not checked.
  */
 final class UntrustedValue implements \JsonSerializable
 {
     /**
-     * @param mixed $value The raw value from the untrusted source.
+     * @param TValue $value The raw value from the untrusted source.
      * @param string $path Where in the input the value was found, e.g. "user.age". Empty for the root.
      * @param bool $strict The default strict mode for int(), float() and string().
      */
@@ -24,6 +26,8 @@ final class UntrustedValue implements \JsonSerializable
     /**
      * Decodes a JSON string into an UntrustedValue. JSON objects become \stdClass objects.
      * Invalid JSON throws a WrongTypeException, with the \JsonException as its previous exception.
+     *
+     * @return self<mixed>
      *
      * @throws WrongTypeException When the string is not valid JSON.
      */
@@ -44,6 +48,8 @@ final class UntrustedValue implements \JsonSerializable
 
     /**
      * Returns the raw value, unchanged and unchecked.
+     *
+     * @return TValue
      */
     public function raw(): mixed
     {
@@ -325,6 +331,8 @@ final class UntrustedValue implements \JsonSerializable
 
     /**
      * Serializes to the raw value, unchanged.
+     *
+     * @return TValue
      */
     public function jsonSerialize(): mixed
     {

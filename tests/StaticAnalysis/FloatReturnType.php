@@ -10,6 +10,8 @@ use Puggan\UntrustedValue\UntrustedValue;
 
 /**
  * Never run, only analysed by PHPStan, to check the conditional return type of float().
+ *
+ * @param UntrustedValue<mixed> $value
  */
 function floatReturnType(UntrustedValue $value): void
 {

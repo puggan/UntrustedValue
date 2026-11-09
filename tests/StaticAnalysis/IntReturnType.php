@@ -10,6 +10,8 @@ use Puggan\UntrustedValue\UntrustedValue;
 
 /**
  * Never run, only analysed by PHPStan, to check the conditional return type of int().
+ *
+ * @param UntrustedValue<mixed> $value
  */
 function intReturnType(UntrustedValue $value): void
 {
