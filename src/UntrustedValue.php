@@ -242,6 +242,26 @@ final class UntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Whether the value is null.
+     */
+    public function isNull(): bool
+    {
+        return $this->value === null;
+    }
+
+    /**
+     * Whether the value is an int, float, string or bool, or null when $nullable.
+     */
+    public function isScalar(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        return is_scalar($this->value);
+    }
+
+    /**
      * Serializes to the raw value, unchanged.
      */
     public function jsonSerialize(): mixed
