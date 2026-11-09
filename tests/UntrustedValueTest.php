@@ -32,6 +32,12 @@ final class UntrustedValueTest extends TestCase
     }
 
     #[DataProvider('values')]
+    public function testRawReturnsTheValue(mixed $value): void
+    {
+        self::assertSame($value, new UntrustedValue($value)->raw());
+    }
+
+    #[DataProvider('values')]
     public function testSerializesToTheValue(mixed $value): void
     {
         self::assertSame(

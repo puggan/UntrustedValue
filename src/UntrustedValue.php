@@ -41,6 +41,14 @@ final class UntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Returns the raw value, unchanged and unchecked.
+     */
+    public function raw(): mixed
+    {
+        return $this->value;
+    }
+
+    /**
      * Serializes to the raw value, unchanged.
      */
     public function jsonSerialize(): mixed
