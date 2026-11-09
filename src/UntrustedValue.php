@@ -262,6 +262,68 @@ final class UntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Whether the value is an object, or null when $nullable.
+     */
+    public function isObject(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        return is_object($this->value);
+    }
+
+    /**
+     * Whether the value is an array, list or not, or null when $nullable.
+     */
+    public function isArray(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        return is_array($this->value);
+    }
+
+    /**
+     * Whether the value is a list, an array with keys 0, 1, 2, … in order, or null when $nullable.
+     * An empty array is a list.
+     */
+    public function isList(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        if (!is_array($this->value)) {
+            return false;
+        }
+
+        return array_is_list($this->value);
+    }
+
+    /**
+     * Whether the value can have named properties: an object, or an array that is not a list.
+     * An empty array is a list, so it does not count. Null passes when $nullable.
+     */
+    public function hasProperties(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        if (is_object($this->value)) {
+            return true;
+        }
+
+        if (!is_array($this->value)) {
+            return false;
+        }
+
+        return !array_is_list($this->value);
+    }
+
+    /**
      * Serializes to the raw value, unchanged.
      */
     public function jsonSerialize(): mixed
