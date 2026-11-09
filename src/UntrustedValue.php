@@ -49,10 +49,113 @@ final class UntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Returns the value as an int.
+     *
+     * Strict mode only accepts an int. Otherwise these are converted too:
+     * - a float within 0.001 above a whole number, like 42.0 or 42.0004;
+     * - a numeric string (see is_numeric()), like "42", " 42", "+42", "042" or "1e3",
+     *   following the same rule once it is read as a number.
+     * Either way the result has to fit in an int.
+     *
+     * @return ($nullable is false ? int : ?int)
+     *
+     * @throws WrongTypeException When the value is not an int, or null when allowed, and cannot be converted.
+     */
+    public function int(bool $nullable = true, bool $strict = false): ?int
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('int');
+            }
+
+            return null;
+        }
+
+        if (!is_scalar($this->value)) {
+            throw $this->wrongType('int');
+        }
+
+        if (is_int($this->value)) {
+            return $this->value;
+        }
+
+        if ($strict) {
+            throw $this->wrongType('int');
+        }
+
+        if (is_float($this->value)) {
+            return $this->floatToInt($this->value);
+        }
+
+        if (!is_string($this->value)) {
+            throw $this->wrongType('int');
+        }
+
+        if (!is_numeric($this->value)) {
+            throw $this->wrongType('int', 'non-numeric-string');
+        }
+
+        $number = +$this->value;
+
+        return is_int($number) ? $number : $this->floatToInt($number);
+    }
+
+    /**
      * Serializes to the raw value, unchanged.
      */
     public function jsonSerialize(): mixed
     {
         return $this->value;
+    }
+
+    /**
+     * The float as an int, when it is within 0.001 above a whole number that fits in an int.
+     * The float is either the value itself, or a numeric string value read as a number.
+     *
+     * @throws WrongTypeException When it is not.
+     */
+    private function floatToInt(float $float): int
+    {
+        $source = is_string($this->value) ? 'numeric-string' : 'float';
+
+        // Casting NaN, INF or an out-of-range float to int warns and gives a wrapped-around number,
+        // so those are rejected before the cast.
+        if (!is_finite($float)) {
+            throw $this->wrongType('int', "non-finite-{$source}");
+        }
+
+        if ($float < PHP_INT_MIN) {
+            throw $this->wrongType('int', "out-of-range-{$source}");
+        }
+
+        if ($float >= -(float) PHP_INT_MIN) {
+            throw $this->wrongType('int', "out-of-range-{$source}");
+        }
+
+        $int = (int) $float;
+
+        if (abs($float - $int) >= 0.001) {
+            throw $this->wrongType('int', "fractional-{$source}");
+        }
+
+        return $int;
+    }
+
+    /**
+     * The given type defaults to get_debug_type() of the value. Pass one when there is a more
+     * precise description, e.g. "non-numeric-string".
+     */
+    private function wrongType(string $expectedType, ?string $givenType = null): WrongTypeException
+    {
+        $givenType ??= get_debug_type($this->value);
+
+        return new WrongTypeException(
+            $this->path === ''
+                ? sprintf('Expected %s, got %s', $expectedType, $givenType)
+                : sprintf('Expected %s at %s, got %s', $expectedType, $this->path, $givenType),
+            $expectedType,
+            $givenType,
+            $this->path,
+        );
     }
 }
