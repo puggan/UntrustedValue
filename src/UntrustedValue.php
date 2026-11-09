@@ -101,6 +101,60 @@ final class UntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Returns the value as a float.
+     *
+     * Ints are always accepted, as JSON numbers like 1 decode to int, and are widened to float.
+     * Strict mode accepts nothing else. Otherwise a numeric string (see is_numeric()), like "4.2",
+     * " 4.2" or "1e3", is converted too, as long as it gives a finite float.
+     *
+     * @return ($nullable is false ? float : ?float)
+     *
+     * @throws WrongTypeException When the value is not a float, or null when allowed, and cannot be converted.
+     */
+    public function float(bool $nullable = true, bool $strict = false): ?float
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('float');
+            }
+
+            return null;
+        }
+
+        if (!is_scalar($this->value)) {
+            throw $this->wrongType('float');
+        }
+
+        if (is_float($this->value)) {
+            return $this->value;
+        }
+
+        if (is_int($this->value)) {
+            return (float) $this->value;
+        }
+
+        if ($strict) {
+            throw $this->wrongType('float');
+        }
+
+        if (!is_string($this->value)) {
+            throw $this->wrongType('float');
+        }
+
+        if (!is_numeric($this->value)) {
+            throw $this->wrongType('float', 'non-numeric-string');
+        }
+
+        $float = (float) $this->value;
+
+        if (!is_finite($float)) {
+            throw $this->wrongType('float', 'non-finite-numeric-string');
+        }
+
+        return $float;
+    }
+
+    /**
      * Serializes to the raw value, unchanged.
      */
     public function jsonSerialize(): mixed
