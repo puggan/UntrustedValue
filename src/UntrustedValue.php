@@ -13,10 +13,12 @@ final class UntrustedValue implements \JsonSerializable
     /**
      * @param mixed $value The raw value from the untrusted source.
      * @param string $path Where in the input the value was found, e.g. "user.age". Empty for the root.
+     * @param bool $strict The default strict mode for int(), float() and string().
      */
     public function __construct(
         public readonly mixed $value,
         public readonly string $path = '',
+        public readonly bool $strict = false,
     ) {}
 
     /**
@@ -51,7 +53,7 @@ final class UntrustedValue implements \JsonSerializable
     /**
      * Returns the value as an int.
      *
-     * Strict mode only accepts an int. Otherwise these are converted too:
+     * Strict mode ($strict, or the constructor's $strict when null) only accepts an int. Otherwise these are converted too:
      * - a float within 0.001 above a whole number, like 42.0 or 42.0004;
      * - a numeric string (see is_numeric()), like "42", " 42", "+42", "042" or "1e3",
      *   following the same rule once it is read as a number.
@@ -61,7 +63,7 @@ final class UntrustedValue implements \JsonSerializable
      *
      * @throws WrongTypeException When the value is not an int, or null when allowed, and cannot be converted.
      */
-    public function int(bool $nullable = true, bool $strict = false): ?int
+    public function int(bool $nullable = true, ?bool $strict = null): ?int
     {
         if ($this->value === null) {
             if (!$nullable) {
@@ -79,7 +81,7 @@ final class UntrustedValue implements \JsonSerializable
             return $this->value;
         }
 
-        if ($strict) {
+        if ($strict ?? $this->strict) {
             throw $this->wrongType('int');
         }
 
@@ -104,14 +106,14 @@ final class UntrustedValue implements \JsonSerializable
      * Returns the value as a float.
      *
      * Ints are always accepted, as JSON numbers like 1 decode to int, and are widened to float.
-     * Strict mode accepts nothing else. Otherwise a numeric string (see is_numeric()), like "4.2",
+     * Strict mode ($strict, or the constructor's $strict when null) accepts nothing else. Otherwise a numeric string (see is_numeric()), like "4.2",
      * " 4.2" or "1e3", is converted too, as long as it gives a finite float.
      *
      * @return ($nullable is false ? float : ?float)
      *
      * @throws WrongTypeException When the value is not a float, or null when allowed, and cannot be converted.
      */
-    public function float(bool $nullable = true, bool $strict = false): ?float
+    public function float(bool $nullable = true, ?bool $strict = null): ?float
     {
         if ($this->value === null) {
             if (!$nullable) {
@@ -133,7 +135,7 @@ final class UntrustedValue implements \JsonSerializable
             return (float) $this->value;
         }
 
-        if ($strict) {
+        if ($strict ?? $this->strict) {
             throw $this->wrongType('float');
         }
 
@@ -157,14 +159,14 @@ final class UntrustedValue implements \JsonSerializable
     /**
      * Returns the value as a string.
      *
-     * Strict mode only accepts a string. Otherwise an int, or a finite float, is converted too,
+     * Strict mode ($strict, or the constructor's $strict when null) only accepts a string. Otherwise an int, or a finite float, is converted too,
      * the way PHP casts it, like "42", "4.2" or "1.0E+25". Bools are never converted.
      *
      * @return ($nullable is false ? string : ?string)
      *
      * @throws WrongTypeException When the value is not a string, or null when allowed, and cannot be converted.
      */
-    public function string(bool $nullable = true, bool $strict = false): ?string
+    public function string(bool $nullable = true, ?bool $strict = null): ?string
     {
         if ($this->value === null) {
             if (!$nullable) {
@@ -182,7 +184,7 @@ final class UntrustedValue implements \JsonSerializable
             return $this->value;
         }
 
-        if ($strict) {
+        if ($strict ?? $this->strict) {
             throw $this->wrongType('string');
         }
 
