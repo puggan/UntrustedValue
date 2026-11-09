@@ -155,6 +155,49 @@ final class UntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Returns the value as a string.
+     *
+     * Strict mode only accepts a string. Otherwise an int, or a finite float, is converted too,
+     * the way PHP casts it, like "42", "4.2" or "1.0E+25". Bools are never converted.
+     *
+     * @return ($nullable is false ? string : ?string)
+     *
+     * @throws WrongTypeException When the value is not a string, or null when allowed, and cannot be converted.
+     */
+    public function string(bool $nullable = true, bool $strict = false): ?string
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('string');
+            }
+
+            return null;
+        }
+
+        if (!is_scalar($this->value)) {
+            throw $this->wrongType('string');
+        }
+
+        if (is_string($this->value)) {
+            return $this->value;
+        }
+
+        if ($strict) {
+            throw $this->wrongType('string');
+        }
+
+        if (is_bool($this->value)) {
+            throw $this->wrongType('string');
+        }
+
+        if (is_float($this->value) && !is_finite($this->value)) {
+            throw $this->wrongType('string', 'non-finite-float');
+        }
+
+        return (string) $this->value;
+    }
+
+    /**
      * Serializes to the raw value, unchanged.
      */
     public function jsonSerialize(): mixed
