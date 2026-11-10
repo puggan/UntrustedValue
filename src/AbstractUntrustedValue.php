@@ -444,6 +444,32 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * Like filter(), but keeps the items $validator does not throw an UntrustedValueException for.
+     * The validator's return value is ignored, so it can be a void method that just checks, like
+     * fn($user) => $user->property('age')->asInt(false)->range(0, 150). The original item is kept,
+     * not what the validator returns. Other exceptions are not caught, so a bug in $validator or an
+     * invalid pattern given to match() still comes through.
+     *
+     * @param callable(static<mixed>, mixed): mixed $validator
+     *
+     * @return static<\Generator<mixed, static<mixed>, mixed, void>>
+     *
+     * @throws WrongTypeException When yieldArray() throws.
+     */
+    public function filterValid(callable $validator): static
+    {
+        return $this->filter(static function (self $item, mixed $key) use ($validator): bool {
+            try {
+                $validator($item, $key);
+
+                return true;
+            } catch (UntrustedValueException) {
+                return false;
+            }
+        });
+    }
+
+    /**
      * A new object of the same class and path, holding a generator of $mapper's result for each
      * item of yieldArray(), with the original keys, as yieldMap() gives them. Like filter(), it can
      * be chained: iterating the result, or calling list(), listInt(), filter() and the like on it,
