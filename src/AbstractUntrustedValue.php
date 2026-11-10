@@ -270,6 +270,41 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * A property of an object value, or a key of an array value, as a new object of the same class.
+     * Its path is this path plus the name, like "user.age".
+     *
+     * Only public properties count. A missing property throws when $requiredKey, and otherwise
+     * gives a null value.
+     *
+     * @return static<mixed>
+     *
+     * @throws WrongTypeException When the value is neither an object nor an array.
+     * @throws InvalidTypeException When the property is missing and $requiredKey is true.
+     */
+    public function property(string $name, bool $requiredKey = true): static
+    {
+        $path = $this->path === '' ? $name : $this->path . '.' . $name;
+
+        if (is_object($this->value)) {
+            $properties = get_object_vars($this->value);
+        } elseif (is_array($this->value)) {
+            $properties = $this->value;
+        } else {
+            throw $this->wrongType('object|array');
+        }
+
+        if (array_key_exists($name, $properties)) {
+            return new static($properties[$name], $path);
+        }
+
+        if ($requiredKey) {
+            throw new InvalidTypeException(sprintf('Missing required property %s', $path), 'required', $path);
+        }
+
+        return new static(null, $path);
+    }
+
+    /**
      * Returns the raw value, unchanged and unchecked.
      *
      * @return TValue
