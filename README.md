@@ -4,16 +4,28 @@ Turn untrusted input values (request data, decoded JSON, environment variables, 
 type-safe values, with optional validation. Every check knows where in the input the value came
 from, so errors point at the exact field, like `tags.2`.
 
+> **This is the PHP 8.0 branch.** The main releases need PHP 8.1. This branch is a separate build for
+> PHP 8.0, released as alpha versions like `v0.2.0-a80`, so Composer only installs it when you ask
+> for it. Compared with the main releases:
+>
+> - The wrapped value and its path are not `readonly`, which PHP 8.0 doesn't have. They are marked
+>   `@readonly` instead, so PHPStan reports any write from outside, but PHP itself doesn't stop it.
+> - `array_is_list()` comes from `symfony/polyfill-php81`, which this build requires.
+> - `enum()` exists but can't be used, as PHP 8.0 has no enums.
+
 ## Installation
 
+On PHP 8.0, ask for the alpha versions:
+
 ```bash
-composer require puggan/untrusted-value
+composer require "puggan/untrusted-value:^0.2@alpha"
 ```
 
-Requires PHP 8.1 or later, with ext-mbstring.
+Requires PHP 8.0, with ext-mbstring. On PHP 8.1 or later, use the main releases instead:
+`composer require puggan/untrusted-value`. Those sort above the PHP 8.0 alphas, so on PHP 8.1 or
+later even `^0.2@alpha` installs a main release.
 
-PHP 8.1 is the floor because the wrapped value and its path are `readonly` properties, which PHP
-8.1 introduced. The test suite passes on PHP 8.1 through 8.5, and on the 8.6 release candidate.
+This build's test suite passes on PHP 8.0.
 
 ## Example
 
@@ -22,7 +34,7 @@ A DTO that hydrates itself from untrusted data:
 ```php
 use Puggan\UntrustedValue\UntrustedValue;
 
-final readonly class UserDto
+final class UserDto
 {
     /**
      * @param list<string> $tags
@@ -135,7 +147,7 @@ error types and filters.
 
 ## Development
 
-The tests and development tools need PHP 8.4 or later; the tests use its `new Foo()->bar()` syntax.
+On this branch, the tests and development tools run on PHP 8.0, with PHPUnit 9.
 
 ```bash
 composer test     # PHPUnit
