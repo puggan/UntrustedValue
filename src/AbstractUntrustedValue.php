@@ -849,7 +849,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         } elseif (is_object($this->value)) {
             $count = count(get_object_vars($this->value));
         } else {
-            throw $this->wrongType('array|object');
+            throw $this->wrongType('object|array');
         }
 
         if ($count < $min) {

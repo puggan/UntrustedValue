@@ -97,8 +97,13 @@ final class CountTest extends TestCase
 
     public function testScalarThrows(): void
     {
-        $this->expectException(WrongTypeException::class);
-        new UntrustedValue('abc')->count();
+        try {
+            new UntrustedValue('abc', 'tags')->count();
+            self::fail('Expected a WrongTypeException');
+        } catch (WrongTypeException $exception) {
+            self::assertSame('object|array', $exception->expectedType);
+            self::assertSame('tags', $exception->path);
+        }
     }
 
     public function testPluralInMessages(): void
