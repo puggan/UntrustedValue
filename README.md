@@ -105,7 +105,7 @@ Most methods take `bool $nullable = true`: null is accepted, and passes through,
 | Validate | `range()`, `length()`, `match()`, `notMatch()` |
 | Change | `trim()`, `replace()`, `default()`, `blankDefault()` |
 | Read nested values | `property()`, `list()`, `array()`, `yieldList()`, `yieldArray()`, or `foreach` directly |
-| Filter and map nested values | `filter()`, `listMap()`, `arrayMap()`, `yieldMap()`, and `listRawMap()`, `arrayRawMap()`, `yieldRawMap()` without wrapping |
+| Filter and map nested values | `filter()`, `listMap()`, `arrayMap()`, `yieldMap()`, `yieldFlatMap()`, and `listRawMap()`, `arrayRawMap()`, `yieldRawMap()` without wrapping |
 | Typed collections | `listInt()`, `arrayInt()`, `yieldInt()`, and the same for `Float`, `String` and `Scalar` |
 
 The require, convert, validate and change methods return the same object when there is nothing to

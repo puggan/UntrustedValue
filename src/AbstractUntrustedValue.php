@@ -480,6 +480,28 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * Like yieldRawMap(), but each result of $mapper must be iterable, and its items are yielded
+     * one by one (yield from) instead of the result itself. Returning another untrusted value, like
+     * $item->property('tags'), yields its items wrapped with their paths; returning a plain array
+     * yields its values as they are. Keys come from each result, so they repeat across items; use
+     * iterator_to_array($generator, false) to collect them. The value is checked when this is
+     * called; $mapper runs during iteration.
+     *
+     * @template TKey
+     * @template TResult
+     *
+     * @param callable(static<mixed>, mixed): iterable<TKey, TResult> $mapper
+     *
+     * @return \Generator<TKey, TResult, mixed, void>
+     *
+     * @throws WrongTypeException When yieldArray() throws.
+     */
+    public function yieldFlatMap(callable $mapper, bool $nullable = true): \Generator
+    {
+        return $this->flatMapItems($this->yieldArray($nullable), $mapper);
+    }
+
+    /**
      * Like listMap(), but $mapper's results are returned as they are, without wrapping.
      *
      * @template TResult
@@ -1270,6 +1292,22 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     {
         foreach ($items as $key => $item) {
             yield $key => $mapper($item, $key);
+        }
+    }
+
+    /**
+     * @template TKey
+     * @template TResult
+     *
+     * @param \Generator<mixed, static<mixed>, mixed, void> $items
+     * @param callable(static<mixed>, mixed): iterable<TKey, TResult> $mapper
+     *
+     * @return \Generator<TKey, TResult, mixed, void>
+     */
+    private function flatMapItems(\Generator $items, callable $mapper): \Generator
+    {
+        foreach ($items as $key => $item) {
+            yield from $mapper($item, $key);
         }
     }
 
