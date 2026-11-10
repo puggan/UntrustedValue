@@ -297,6 +297,70 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Each item of an array or object value, indexed 0, 1, 2, …, as a new object of the same class
+     * whose path is this path plus the index, like "tags.0". The value is iterated directly, so an
+     * array or \stdClass is not copied: an array gives its items, a Traversable object (like an
+     * iterator) what it yields, and another object its public property values. The value is
+     * checked when this is called, not when iteration starts. Null gives no items when $nullable.
+     *
+     * @return \Generator<int, static<mixed>, mixed, void>
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
+     */
+    public function yieldList(bool $nullable = true): \Generator
+    {
+        return $this->yieldItems($this->iterable('list', $nullable), false);
+    }
+
+    /**
+     * Like yieldList(), but yields the original keys, and the paths use them, like "user.name". A
+     * Traversable object can yield keys of any type; one that is not an int or string shows its
+     * type in the path, like "user.[stdClass]".
+     *
+     * @return \Generator<mixed, static<mixed>, mixed, void>
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
+     */
+    public function yieldArray(bool $nullable = true): \Generator
+    {
+        return $this->yieldItems($this->iterable('array', $nullable), true);
+    }
+
+    /**
+     * The items of yieldList() as a list.
+     *
+     * @return list<static<mixed>>
+     *
+     * @throws WrongTypeException When yieldList() throws.
+     */
+    public function list(bool $nullable = true): array
+    {
+        return iterator_to_array($this->yieldList($nullable), false);
+    }
+
+    /**
+     * The items of yieldArray() as an array with the same keys. A later item with the same key
+     * replaces an earlier one, which only happens with a Traversable object.
+     *
+     * @return array<array-key, static<mixed>>
+     *
+     * @throws WrongTypeException When yieldArray() throws, or yields a key that is not an int or string.
+     */
+    public function array(bool $nullable = true): array
+    {
+        $array = [];
+        foreach ($this->yieldArray($nullable) as $key => $item) {
+            if (!is_int($key) && !is_string($key)) {
+                throw $item->wrongType('array-key', get_debug_type($key));
+            }
+
+            $array[$key] = $item;
+        }
+
+        return $array;
+    }
+
+    /**
      * Whether the value has the property: a public property of an object, or a key of an array.
      * Other values have no properties, so it is false for them.
      */
@@ -745,6 +809,50 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     public function jsonSerialize(): mixed
     {
         return $this->value;
+    }
+    /**
+     * What yieldList() and yieldArray() iterate: an array or a Traversable object itself, the
+     * public properties of another object, or an empty array for null when $nullable.
+     * get_object_vars() shares a \stdClass's property table rather than copying it.
+     *
+     * @return iterable<mixed, mixed>
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
+     */
+    private function iterable(string $expectedType, bool $nullable): iterable
+    {
+        if ($this->value === null && $nullable) {
+            return [];
+        }
+
+        if (is_iterable($this->value)) {
+            return $this->value;
+        }
+
+        if (is_object($this->value)) {
+            return get_object_vars($this->value);
+        }
+
+        throw $this->wrongType($expectedType);
+    }
+
+    /**
+     * @param iterable<mixed, mixed> $items
+     *
+     * @return \Generator<mixed, static<mixed>, mixed, void>
+     */
+    private function yieldItems(iterable $items, bool $keepKeys): \Generator
+    {
+        $index = 0;
+        foreach ($items as $key => $item) {
+            if (!$keepKeys) {
+                $key = $index++;
+            }
+
+            $name = is_int($key) || is_string($key) ? (string) $key : '[' . get_debug_type($key) . ']';
+
+            yield $key => new static($item, $this->childPath($name));
+        }
     }
     /**
      * The public properties of an object value, or an array value itself, or null for other values.
