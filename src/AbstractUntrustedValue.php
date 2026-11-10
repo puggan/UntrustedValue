@@ -523,6 +523,46 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * This object, when the value is null.
+     *
+     * @return static<null&TValue>
+     *
+     * @throws WrongTypeException When the value is not null.
+     */
+    public function requireNull(): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        throw $this->wrongType('null');
+    }
+
+    /**
+     * This object, when isScalar() with the same $nullable is true.
+     *
+     * @return ($nullable is false ? static<scalar&TValue> : static<(scalar|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not an int, float, string or bool, or is null when not allowed.
+     */
+    public function requireScalar(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('scalar');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsScalar()) {
+            return $this;
+        }
+
+        throw $this->wrongType('scalar');
+    }
+
+    /**
      * This object, when isArray() with the same $nullable is true.
      *
      * @return ($nullable is false ? static<array<mixed>&TValue> : static<(array<mixed>|null)&TValue>)
@@ -711,6 +751,17 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     private function valueIsNull(): bool
     {
         return $this->value === null;
+    }
+
+    /**
+     * Whether the value is an int, float, string or bool. When it is, PHPStan narrows this
+     * object's TValue to match.
+     *
+     * @phpstan-assert-if-true static<scalar&TValue> $this
+     */
+    private function valueIsScalar(): bool
+    {
+        return is_scalar($this->value);
     }
 
     /**
