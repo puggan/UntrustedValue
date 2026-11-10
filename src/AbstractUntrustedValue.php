@@ -956,6 +956,20 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         return is_scalar($this->value);
     }
     /**
+     * Whether the value is iterable (see is_iterable()): an array or a Traversable object, or null
+     * when $nullable. A plain object like a \stdClass is not iterable, even though foreach over this
+     * object, or yieldList(), still reads its public properties.
+     */
+    public function isIterable(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        return is_iterable($this->value);
+    }
+
+    /**
      * Whether the value is an object, or null when $nullable.
      */
     public function isObject(bool $nullable = true): bool
