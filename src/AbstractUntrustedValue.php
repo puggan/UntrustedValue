@@ -110,6 +110,19 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     abstract public function asLoose(): UntrustedValue;
 
     /**
+     * The value converted by int(), wrapped as an UntrustedStrictValue with the same path, so it
+     * can be checked further while it is known to be an int.
+     *
+     * @return ($nullable is false ? UntrustedStrictValue<int> : UntrustedStrictValue<int|null>)
+     *
+     * @throws WrongTypeException When int() throws.
+     */
+    public function asInt(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->int(nullable: $nullable), $this->path);
+    }
+
+    /**
      * Returns the raw value, unchanged and unchecked.
      *
      * @return TValue
