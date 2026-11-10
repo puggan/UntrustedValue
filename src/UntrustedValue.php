@@ -5,81 +5,37 @@ declare(strict_types=1);
 namespace Puggan\UntrustedValue;
 
 /**
- * Wraps a value from an untrusted source, and hands it back as a type-safe value,
- * optionally validated.
+ * Wraps a value from an untrusted source. int(), float() and string() also convert compatible
+ * values, like the string "42" to the int 42. See UntrustedStrictValue for exact types only.
  *
  * @template TValue The type of the raw value. Only describes what was wrapped, it is not checked.
+ *
+ * @extends AbstractUntrustedValue<TValue>
  */
-final class UntrustedValue implements \JsonSerializable
+final class UntrustedValue extends AbstractUntrustedValue
 {
-    /**
-     * @param TValue $value The raw value from the untrusted source.
-     * @param string $path Where in the input the value was found, e.g. "user.age". Empty for the root.
-     * @param bool $strict The default strict mode for int(), float() and string().
-     */
-    public function __construct(
-        public readonly mixed $value,
-        public readonly string $path = '',
-        public readonly bool $strict = false,
-    ) {}
-
-    /**
-     * Decodes a JSON string into an UntrustedValue. JSON objects become \stdClass objects.
-     * Invalid JSON throws a WrongTypeException, with the \JsonException as its previous exception.
-     *
-     * @return self<mixed>
-     *
-     * @throws WrongTypeException When the string is not valid JSON.
-     */
-    public static function fromJson(string $json): self
-    {
-        try {
-            return new self(json_decode($json, false, 512, JSON_THROW_ON_ERROR));
-        } catch (\JsonException $exception) {
-            throw new WrongTypeException(
-                'Invalid JSON: ' . $exception->getMessage(),
-                'json',
-                'string',
-                '',
-                $exception,
-            );
-        }
-    }
-
-    /**
-     * Returns the raw value, unchanged and unchecked.
-     *
-     * @return TValue
-     */
-    public function raw(): mixed
-    {
-        return $this->value;
-    }
-
     /**
      * Returns the value as an int.
      *
-     * Strict mode ($strict, or the constructor's $strict when null) only accepts an int. Otherwise these are converted too:
+     * Besides an int, these are converted too:
      * - a float within 0.001 above a whole number, like 42.0 or 42.0004;
      * - a numeric string (see is_numeric()), like "42", " 42", "+42", "042" or "1e3",
      *   following the same rule once it is read as a number.
      * Either way the result has to fit in an int.
      *
-     * The return type follows TValue where it can: strict mode gives int&TValue (or ?int&TValue when
-     * nullable), a TValue that is already an int (or ?int when nullable) is returned as is, and
-     * otherwise the result is int, or ?int when null is both allowed and possible.
+     * The return type follows TValue where it can: a TValue that is already an int (or ?int when
+     * nullable) is returned as is, and otherwise the result is int, or ?int when null is both
+     * allowed and possible.
      *
      * @return (
-     *     $strict is true
-     *     ? ($nullable is false ? int&TValue : (int|null)&TValue)
-     *     : ($nullable is false
-     *         ? (TValue is int ? TValue : int)
-     *         : (TValue is int|null ? TValue : (TValue is scalar|array|object|resource ? int : int|null)))
+     *     $nullable is false
+     *     ? (TValue is int ? TValue : int)
+     *     : (TValue is int|null ? TValue : (TValue is scalar|array|object|resource ? int : int|null))
      * )
      *
      * @throws WrongTypeException When the value is not an int, or null when allowed, and cannot be converted.
      */
-    public function int(bool $nullable = true, ?bool $strict = null): ?int
+    public function int(bool $nullable = true): ?int
     {
         if ($this->value === null) {
             if (!$nullable) {
@@ -95,10 +51,6 @@ final class UntrustedValue implements \JsonSerializable
 
         if (is_int($this->value)) {
             return $this->value;
-        }
-
-        if ($strict ?? $this->strict) {
-            throw $this->wrongType('int');
         }
 
         if (is_float($this->value)) {
@@ -117,17 +69,15 @@ final class UntrustedValue implements \JsonSerializable
 
         return is_int($number) ? $number : $this->floatToInt($number);
     }
-
     /**
      * Returns the value as a float.
      *
-     * Ints are always accepted, as JSON numbers like 1 decode to int, and are widened to float.
-     * Strict mode ($strict, or the constructor's $strict when null) accepts nothing else. Otherwise a numeric string (see is_numeric()), like "4.2",
-     * " 4.2" or "1e3", is converted too, as long as it gives a finite float.
+     * Ints are widened to float. A numeric string (see is_numeric()), like "4.2", " 4.2" or "1e3",
+     * is converted too, as long as it gives a finite float.
      *
      * The return type follows TValue where it can: a TValue that is already a float (or ?float when
      * nullable) is returned as is, and otherwise the result is float, or ?float when null is both
-     * allowed and possible. Strict mode isn't narrowed further, as it still accepts ints.
+     * allowed and possible.
      *
      * @return (
      *     $nullable is false
@@ -137,7 +87,7 @@ final class UntrustedValue implements \JsonSerializable
      *
      * @throws WrongTypeException When the value is not a float, or null when allowed, and cannot be converted.
      */
-    public function float(bool $nullable = true, ?bool $strict = null): ?float
+    public function float(bool $nullable = true): ?float
     {
         if ($this->value === null) {
             if (!$nullable) {
@@ -159,10 +109,6 @@ final class UntrustedValue implements \JsonSerializable
             return (float) $this->value;
         }
 
-        if ($strict ?? $this->strict) {
-            throw $this->wrongType('float');
-        }
-
         if (!is_string($this->value)) {
             throw $this->wrongType('float');
         }
@@ -179,29 +125,25 @@ final class UntrustedValue implements \JsonSerializable
 
         return $float;
     }
-
     /**
      * Returns the value as a string.
      *
-     * Strict mode ($strict, or the constructor's $strict when null) only accepts a string. Otherwise an int, or a finite float, is converted too,
-     * the way PHP casts it, like "42", "4.2" or "1.0E+25". Bools are never converted.
+     * Besides a string, an int or a finite float is converted too, the way PHP casts it, like "42",
+     * "4.2" or "1.0E+25". Bools are never converted.
      *
-     * The return type follows TValue where it can: strict mode gives string&TValue (or
-     * ?string&TValue when nullable), a TValue that is already a string (or ?string when nullable) is
-     * returned as is, and otherwise the result is string, or ?string when null is both allowed and
-     * possible.
+     * The return type follows TValue where it can: a TValue that is already a string (or ?string
+     * when nullable) is returned as is, and otherwise the result is string, or ?string when null is
+     * both allowed and possible.
      *
      * @return (
-     *     $strict is true
-     *     ? ($nullable is false ? string&TValue : (string|null)&TValue)
-     *     : ($nullable is false
-     *         ? (TValue is string ? TValue : string)
-     *         : (TValue is string|null ? TValue : (TValue is scalar|array|object|resource ? string : string|null)))
+     *     $nullable is false
+     *     ? (TValue is string ? TValue : string)
+     *     : (TValue is string|null ? TValue : (TValue is scalar|array|object|resource ? string : string|null))
      * )
      *
      * @throws WrongTypeException When the value is not a string, or null when allowed, and cannot be converted.
      */
-    public function string(bool $nullable = true, ?bool $strict = null): ?string
+    public function string(bool $nullable = true): ?string
     {
         if ($this->value === null) {
             if (!$nullable) {
@@ -219,10 +161,6 @@ final class UntrustedValue implements \JsonSerializable
             return $this->value;
         }
 
-        if ($strict ?? $this->strict) {
-            throw $this->wrongType('string');
-        }
-
         if (is_bool($this->value)) {
             throw $this->wrongType('string');
         }
@@ -233,141 +171,6 @@ final class UntrustedValue implements \JsonSerializable
 
         return (string) $this->value;
     }
-
-    /**
-     * Whether int() with the same arguments would return an int instead of throwing.
-     */
-    public function isInt(bool $nullable = true, ?bool $strict = null): bool
-    {
-        try {
-            $this->int($nullable, $strict);
-
-            return true;
-        } catch (WrongTypeException) {
-            return false;
-        }
-    }
-
-    /**
-     * Whether float() with the same arguments would return a float instead of throwing.
-     */
-    public function isFloat(bool $nullable = true, ?bool $strict = null): bool
-    {
-        try {
-            $this->float($nullable, $strict);
-
-            return true;
-        } catch (WrongTypeException) {
-            return false;
-        }
-    }
-
-    /**
-     * Whether string() with the same arguments would return a string instead of throwing.
-     */
-    public function isString(bool $nullable = true, ?bool $strict = null): bool
-    {
-        try {
-            $this->string($nullable, $strict);
-
-            return true;
-        } catch (WrongTypeException) {
-            return false;
-        }
-    }
-
-    /**
-     * Whether the value is null.
-     */
-    public function isNull(): bool
-    {
-        return $this->value === null;
-    }
-
-    /**
-     * Whether the value is an int, float, string or bool, or null when $nullable.
-     */
-    public function isScalar(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        return is_scalar($this->value);
-    }
-
-    /**
-     * Whether the value is an object, or null when $nullable.
-     */
-    public function isObject(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        return is_object($this->value);
-    }
-
-    /**
-     * Whether the value is an array, list or not, or null when $nullable.
-     */
-    public function isArray(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        return is_array($this->value);
-    }
-
-    /**
-     * Whether the value is a list, an array with keys 0, 1, 2, … in order, or null when $nullable.
-     * An empty array is a list.
-     */
-    public function isList(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        if (!is_array($this->value)) {
-            return false;
-        }
-
-        return array_is_list($this->value);
-    }
-
-    /**
-     * Whether the value can have named properties: an object, or an array that is not a list.
-     * An empty array is a list, so it does not count. Null passes when $nullable.
-     */
-    public function hasProperties(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        if (is_object($this->value)) {
-            return true;
-        }
-
-        if (!is_array($this->value)) {
-            return false;
-        }
-
-        return !array_is_list($this->value);
-    }
-
-    /**
-     * Serializes to the raw value, unchanged.
-     *
-     * @return TValue
-     */
-    public function jsonSerialize(): mixed
-    {
-        return $this->value;
-    }
-
     /**
      * The float as an int, when it is within 0.001 above a whole number that fits in an int.
      * The float is either the value itself, or a numeric string value read as a number.
@@ -399,23 +202,5 @@ final class UntrustedValue implements \JsonSerializable
         }
 
         return $int;
-    }
-
-    /**
-     * The given type defaults to get_debug_type() of the value. Pass one when there is a more
-     * precise description, e.g. "non-numeric-string".
-     */
-    private function wrongType(string $expectedType, ?string $givenType = null): WrongTypeException
-    {
-        $givenType ??= get_debug_type($this->value);
-
-        return new WrongTypeException(
-            $this->path === ''
-                ? sprintf('Expected %s, got %s', $expectedType, $givenType)
-                : sprintf('Expected %s at %s, got %s', $expectedType, $this->path, $givenType),
-            $expectedType,
-            $givenType,
-            $this->path,
-        );
     }
 }

@@ -6,6 +6,7 @@ namespace Puggan\UntrustedValue\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
 
 final class UntrustedValueIsTypeTest extends TestCase
@@ -38,10 +39,11 @@ final class UntrustedValueIsTypeTest extends TestCase
     public function testMatchesTheConversionMethods(mixed $value, array $int, array $float, array $string): void
     {
         $untrusted = new UntrustedValue($value);
+        $strict = new UntrustedStrictValue($value);
 
-        self::assertSame($int, [$untrusted->isInt(), $untrusted->isInt(strict: true)]);
-        self::assertSame($float, [$untrusted->isFloat(), $untrusted->isFloat(strict: true)]);
-        self::assertSame($string, [$untrusted->isString(), $untrusted->isString(strict: true)]);
+        self::assertSame($int, [$untrusted->isInt(), $strict->isInt()]);
+        self::assertSame($float, [$untrusted->isFloat(), $strict->isFloat()]);
+        self::assertSame($string, [$untrusted->isString(), $strict->isString()]);
     }
 
     public function testNullIsAcceptedByDefault(): void
@@ -60,13 +62,5 @@ final class UntrustedValueIsTypeTest extends TestCase
         self::assertFalse($null->isInt(nullable: false));
         self::assertFalse($null->isFloat(nullable: false));
         self::assertFalse($null->isString(nullable: false));
-    }
-
-    public function testUsesTheConstructorStrictByDefault(): void
-    {
-        $strict = new UntrustedValue('42', '', true);
-
-        self::assertFalse($strict->isInt());
-        self::assertTrue($strict->isInt(strict: false));
     }
 }

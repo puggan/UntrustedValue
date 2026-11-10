@@ -6,6 +6,7 @@ namespace Puggan\UntrustedValue\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
 use Puggan\UntrustedValue\WrongTypeException;
 
@@ -77,7 +78,7 @@ final class UntrustedValueIntTest extends TestCase
     public function testReturnsInts(int $value): void
     {
         self::assertSame($value, new UntrustedValue($value)->int());
-        self::assertSame($value, new UntrustedValue($value)->int(strict: true));
+        self::assertSame($value, new UntrustedStrictValue($value)->int());
     }
 
     #[DataProvider('convertible')]
@@ -90,7 +91,7 @@ final class UntrustedValueIntTest extends TestCase
     public function testRejectsConversionWhenStrict(mixed $value, int $nonStrictResult): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue($value)->int(strict: true);
+        new UntrustedStrictValue($value)->int();
     }
 
     #[DataProvider('notConvertible')]
@@ -110,7 +111,7 @@ final class UntrustedValueIntTest extends TestCase
     public function testNullIsAllowedByDefault(): void
     {
         self::assertNull(UntrustedValue::fromJson('null')->int());
-        self::assertNull(UntrustedValue::fromJson('null')->int(strict: true));
+        self::assertNull(UntrustedStrictValue::fromJson('null')->int());
     }
 
     public function testNullIsRejectedWhenNotNullable(): void

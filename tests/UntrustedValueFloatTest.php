@@ -6,6 +6,7 @@ namespace Puggan\UntrustedValue\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
 use Puggan\UntrustedValue\WrongTypeException;
 
@@ -61,12 +62,12 @@ final class UntrustedValueFloatTest extends TestCase
     public function testReturnsNumbers(int|float $value, float $expected): void
     {
         self::assertSame($expected, new UntrustedValue($value)->float());
-        self::assertSame($expected, new UntrustedValue($value)->float(strict: true));
+        self::assertSame($expected, new UntrustedStrictValue($value)->float());
     }
 
     public function testReturnsNan(): void
     {
-        self::assertNan(new UntrustedValue(NAN)->float(strict: true));
+        self::assertNan(new UntrustedStrictValue(NAN)->float());
     }
 
     #[DataProvider('numericStrings')]
@@ -79,7 +80,7 @@ final class UntrustedValueFloatTest extends TestCase
     public function testRejectsConversionWhenStrict(string $value, float $nonStrictResult): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue($value)->float(strict: true);
+        new UntrustedStrictValue($value)->float();
     }
 
     #[DataProvider('notConvertible')]
@@ -99,7 +100,7 @@ final class UntrustedValueFloatTest extends TestCase
     public function testNullIsAllowedByDefault(): void
     {
         self::assertNull(UntrustedValue::fromJson('null')->float());
-        self::assertNull(UntrustedValue::fromJson('null')->float(strict: true));
+        self::assertNull(UntrustedStrictValue::fromJson('null')->float());
     }
 
     public function testNullIsRejectedWhenNotNullable(): void

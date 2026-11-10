@@ -6,6 +6,7 @@ namespace Puggan\UntrustedValue\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
 use Puggan\UntrustedValue\WrongTypeException;
 
@@ -99,36 +100,14 @@ final class UntrustedValueTest extends TestCase
         self::assertSame('', UntrustedValue::fromJson('{}')->path);
     }
 
-    public function testStrictDefaultsToFalse(): void
+    public function testStrictValueOnlyAcceptsExactTypes(): void
     {
-        self::assertFalse(new UntrustedValue(42)->strict);
-    }
-
-    public function testStrictIsReadonly(): void
-    {
-        self::assertTrue(new \ReflectionProperty(UntrustedValue::class, 'strict')->isReadOnly());
-    }
-
-    public function testConstructorStrictIsTheDefaultForTheMethods(): void
-    {
-        $strictString = new UntrustedValue('42', '', true);
-        $strictInt = new UntrustedValue(42, '', true);
+        $strictString = new UntrustedStrictValue('42');
+        $strictInt = new UntrustedStrictValue(42);
 
         self::assertSame('string', self::wrongTypeFrom($strictString->int(...))->givenType);
         self::assertSame('string', self::wrongTypeFrom($strictString->float(...))->givenType);
         self::assertSame('int', self::wrongTypeFrom($strictInt->string(...))->givenType);
-    }
-
-    public function testMethodStrictOverridesTheConstructor(): void
-    {
-        $strict = new UntrustedValue('42', '', true);
-
-        self::assertSame(42, $strict->int(strict: false));
-        self::assertSame(42.0, $strict->float(strict: false));
-        self::assertSame('42', new UntrustedValue(42, '', true)->string(strict: false));
-
-        $this->expectException(WrongTypeException::class);
-        new UntrustedValue('42')->int(strict: true);
     }
 
     private static function wrongTypeFrom(callable $call): WrongTypeException
@@ -140,5 +119,12 @@ final class UntrustedValueTest extends TestCase
         }
 
         self::fail('Expected a WrongTypeException');
+    }
+
+    public function testFromJsonOnTheStrictClassGivesAStrictValue(): void
+    {
+        $strict = UntrustedStrictValue::fromJson('"42"');
+
+        self::assertSame('string', self::wrongTypeFrom($strict->int(...))->givenType);
     }
 }
