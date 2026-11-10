@@ -845,6 +845,29 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * The value split on $separator (see explode()), as a new object of the same class and path
+     * holding a list of strings, so items get paths like "ids.2". The value is read with string(),
+     * so UntrustedStrictValue requires a string. An empty string gives an empty list rather than
+     * explode()'s [''], and null returns this object. For quoted fields, use csv().
+     *
+     * @param non-empty-string $separator
+     *
+     * @return static<list<string>|(null&TValue)>
+     *
+     * @throws WrongTypeException When string() can't return a string.
+     */
+    public function split(string $separator): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        $string = $this->string(false);
+
+        return new static($string === '' ? [] : explode($separator, $string), $this->path);
+    }
+
+    /**
      * This object, when the value is not below $min and not above $max. A null bound is not
      * checked, and a null value passes. The comparison is PHP's < and >, so the value's type is not
      * checked here; convert it first, e.g. with asInt().
