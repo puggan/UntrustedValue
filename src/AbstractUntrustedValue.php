@@ -997,6 +997,51 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * This object, when the value has between $min and $max items, both inclusive. A null $max
+     * means no upper limit. Arrays and Countable objects are counted with count(), and other
+     * objects by their public properties. Null has no count to check, so it passes.
+     *
+     * Counting a generator or other iterator that is not Countable uses it up, so for those the
+     * items are first collected into an array (keys must be int or string), and a new object of the
+     * same class and path holding that array is returned. Items that already are untrusted values,
+     * as from filter() or map(), keep their own paths.
+     *
+     * @return $this|static<array<array-key, mixed>>
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an iterator yields a key that is not an int or string.
+     * @throws InvalidTypeException When there are fewer than $min or more than $max items.
+     */
+    public function count(?int $max = null, int $min = 0): static
+    {
+        if ($this->value === null) {
+            return $this;
+        }
+
+        $counted = $this;
+        if (is_array($this->value) || $this->value instanceof \Countable) {
+            $count = count($this->value);
+        } elseif ($this->value instanceof \Traversable) {
+            $items = $this->traversableToArray($this->value);
+            $counted = new static($items, $this->path);
+            $count = count($items);
+        } elseif (is_object($this->value)) {
+            $count = count(get_object_vars($this->value));
+        } else {
+            throw $this->wrongType('array|object');
+        }
+
+        if ($count < $min) {
+            throw $this->invalid('minCount', sprintf('at least %d items', $min));
+        }
+
+        if ($max !== null && $count > $max) {
+            throw $this->invalid('maxCount', sprintf('at most %d items', $max));
+        }
+
+        return $counted;
+    }
+
+    /**
      * This object, when string() of the value is between $min and $max characters long, both
      * inclusive. A null $max means no upper limit. Characters are counted with mb_strlen(), so
      * "Thorbjörn" is 9 long, not 10. In UntrustedValue an int like 700 is measured as "700".
