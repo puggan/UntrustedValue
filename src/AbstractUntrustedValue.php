@@ -283,25 +283,47 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
      */
     public function property(string $name, bool $requiredKey = true): static
     {
-        $path = $this->path === '' ? $name : $this->path . '.' . $name;
-
-        if (is_object($this->value)) {
-            $properties = get_object_vars($this->value);
-        } elseif (is_array($this->value)) {
-            $properties = $this->value;
-        } else {
-            throw $this->wrongType('object|array');
-        }
+        $properties = $this->properties() ?? throw $this->wrongType('object|array');
 
         if (array_key_exists($name, $properties)) {
-            return new static($properties[$name], $path);
+            return new static($properties[$name], $this->childPath($name));
         }
 
         if ($requiredKey) {
-            throw new InvalidTypeException(sprintf('Missing required property %s', $path), 'required', $path);
+            throw $this->missingProperty($name);
         }
 
-        return new static(null, $path);
+        return new static(null, $this->childPath($name));
+    }
+
+    /**
+     * Whether the value has the property: a public property of an object, or a key of an array.
+     * Other values have no properties, so it is false for them.
+     */
+    public function hasProperty(string $name): bool
+    {
+        $properties = $this->properties();
+
+        return $properties !== null && array_key_exists($name, $properties);
+    }
+
+    /**
+     * This object, when hasProperty() is true.
+     *
+     * @return $this
+     *
+     * @throws WrongTypeException When the value is neither an object nor an array.
+     * @throws InvalidTypeException When the property is missing.
+     */
+    public function requireProperty(string $name): static
+    {
+        $properties = $this->properties() ?? throw $this->wrongType('object|array');
+
+        if (!array_key_exists($name, $properties)) {
+            throw $this->missingProperty($name);
+        }
+
+        return $this;
     }
 
     /**
@@ -692,6 +714,39 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     {
         return $this->value;
     }
+    /**
+     * The public properties of an object value, or an array value itself, or null for other values.
+     *
+     * @return array<array-key, mixed>|null
+     */
+    private function properties(): ?array
+    {
+        if (is_object($this->value)) {
+            return get_object_vars($this->value);
+        }
+
+        if (is_array($this->value)) {
+            return $this->value;
+        }
+
+        return null;
+    }
+
+    /**
+     * The path of a property of this value, like "user.age", or just the name at the root.
+     */
+    private function childPath(string $name): string
+    {
+        return $this->path === '' ? $name : $this->path . '.' . $name;
+    }
+
+    private function missingProperty(string $name): InvalidTypeException
+    {
+        $path = $this->childPath($name);
+
+        return new InvalidTypeException(sprintf('Missing required property %s', $path), 'required', $path);
+    }
+
     /**
      * Whether $subject matches $regexp. An invalid pattern is the caller's mistake, so it
      * throws an \InvalidArgumentException. Other PCRE errors, like an exhausted backtrack limit or
