@@ -16,7 +16,8 @@ class InvalidTypeException extends UntrustedValueException
      */
     public function __construct(
         string $message,
-        public readonly string $filter,
+        /** @readonly */
+        public string $filter,
         string $path,
         ?\Throwable $previous = null,
     ) {

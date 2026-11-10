@@ -16,11 +16,14 @@ namespace Puggan\UntrustedValue;
 abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerializable
 {
     /**
-     * The raw value from the untrusted source.
+     * The raw value from the untrusted source. Read-only: PHP 8.0 has no readonly properties, so
+     * PHPStan's @readonly enforces it instead, which also keeps TValue covariant.
      *
      * @var TValue
+     *
+     * @readonly
      */
-    public readonly mixed $value;
+    public mixed $value;
 
     /**
      * Wraps $value. When $value already is an untrusted value, its raw value is taken instead, so a
@@ -35,7 +38,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      */
     final public function __construct(
         mixed $value,
-        public readonly string $path = '',
+        /** @readonly */
+        public string $path = '',
     ) {
         $this->value = $value instanceof self ? $value->value : $value;
     }

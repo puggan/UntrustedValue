@@ -16,7 +16,8 @@ abstract class UntrustedValueException extends \RuntimeException implements \Jso
      */
     public function __construct(
         string $message,
-        public readonly string $path,
+        /** @readonly */
+        public string $path,
         ?\Throwable $previous = null,
     ) {
         parent::__construct($message, 0, $previous);

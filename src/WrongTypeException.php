@@ -17,8 +17,10 @@ class WrongTypeException extends UntrustedValueException
      */
     public function __construct(
         string $message,
-        public readonly string $expectedType,
-        public readonly string $givenType,
+        /** @readonly */
+        public string $expectedType,
+        /** @readonly */
+        public string $givenType,
         string $path,
         ?\Throwable $previous = null,
     ) {

@@ -12,7 +12,8 @@
     ],
     "require": {
         "php": "~8.0.0",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "symfony/polyfill-php81": "^1.38"
     },
     "autoload": {
         "psr-4": {
