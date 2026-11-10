@@ -868,6 +868,41 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * The value parsed as one CSV record (see str_getcsv()), as a new object of the same class and
+     * path holding a list of strings, so items get paths like "row.2". Unlike split(), a field in
+     * $enclosure can hold the separator, and a doubled $enclosure inside it is one literal one, like
+     * "say ""hi""". The value is read with string(), so UntrustedStrictValue requires a string. An
+     * empty string gives an empty list rather than str_getcsv()'s [null], and null returns this
+     * object.
+     *
+     * $escape defaults to '', as RFC 4180 has no escape character and PHP 8.4 deprecates relying on
+     * str_getcsv()'s old "\\" default. $separator and $enclosure must be one character each.
+     *
+     * @return static<list<string>|(null&TValue)>
+     *
+     * @throws WrongTypeException When string() can't return a string.
+     */
+    public function csv(string $separator = ',', string $enclosure = '"', string $escape = ''): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        $string = $this->string(false);
+
+        if ($string === '') {
+            return new static([], $this->path);
+        }
+
+        $fields = array_map(
+            static fn(?string $field): string => $field ?? '',
+            str_getcsv($string, $separator, $enclosure, $escape),
+        );
+
+        return new static($fields, $this->path);
+    }
+
+    /**
      * This object, when the value is not below $min and not above $max. A null bound is not
      * checked, and a null value passes. The comparison is PHP's < and >, so the value's type is not
      * checked here; convert it first, e.g. with asInt().

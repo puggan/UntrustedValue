@@ -106,7 +106,7 @@ Most methods take `bool $nullable = true`: null is accepted, and passes through,
 | Require, else throw | `requireNull()`, `requireScalar()`, `requireArray()`, `requireObject()`, `requireList()`, `requireMap()`, `requireProperty()` |
 | Convert | `asInt()`, `asFloat()`, `asString()`, `asList()`, `asArray()`, `asObject()`, `asStrict()`, `asLoose()` |
 | Validate | `range()`, `length()`, `match()`, `notMatch()` |
-| Change | `trim()`, `replace()`, `default()`, `blankDefault()` |
+| Change | `trim()`, `replace()`, `default()`, `blankDefault()`, `split()`, `csv()` |
 | Read nested values | `property()`, `list()`, `array()`, `yieldList()`, `yieldArray()`, or `foreach` directly |
 | Filter and map nested values | `filter()` and `map()`, chainable; `listMap()`, `arrayMap()`, `yieldMap()`, `yieldFlatMap()`, and `listRawMap()`, `arrayRawMap()`, `yieldRawMap()` without wrapping |
 | Typed collections | `listInt()`, `arrayInt()`, `yieldInt()`, and the same for `Float`, `String` and `Scalar` |
