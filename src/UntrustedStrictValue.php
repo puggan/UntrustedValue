@@ -15,6 +15,22 @@ namespace Puggan\UntrustedValue;
 final class UntrustedStrictValue extends AbstractUntrustedValue
 {
     /**
+     * @return $this
+     */
+    public function asStrict(): UntrustedStrictValue
+    {
+        return $this;
+    }
+
+    /**
+     * @return UntrustedValue<TValue> A copy with the same value and path.
+     */
+    public function asLoose(): UntrustedValue
+    {
+        return new UntrustedValue($this->value, $this->path);
+    }
+
+    /**
      * Returns the value as an int. Only an int is accepted.
      *
      * @return ($nullable is false ? int&TValue : (int|null)&TValue)

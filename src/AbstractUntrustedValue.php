@@ -92,6 +92,24 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     abstract public function string(bool $nullable = true): ?string;
 
     /**
+     * This value as an UntrustedStrictValue, where int(), float() and string() only accept the
+     * exact type. Returns the same object when it already is one, otherwise a copy with the same
+     * value and path.
+     *
+     * @return UntrustedStrictValue<TValue>
+     */
+    abstract public function asStrict(): UntrustedStrictValue;
+
+    /**
+     * This value as an UntrustedValue, where int(), float() and string() also convert compatible
+     * values. Returns the same object when it already is one, otherwise a copy with the same value
+     * and path.
+     *
+     * @return UntrustedValue<TValue>
+     */
+    abstract public function asLoose(): UntrustedValue;
+
+    /**
      * Returns the raw value, unchanged and unchecked.
      *
      * @return TValue

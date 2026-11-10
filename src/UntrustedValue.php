@@ -15,6 +15,22 @@ namespace Puggan\UntrustedValue;
 final class UntrustedValue extends AbstractUntrustedValue
 {
     /**
+     * @return UntrustedStrictValue<TValue> A copy with the same value and path.
+     */
+    public function asStrict(): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->value, $this->path);
+    }
+
+    /**
+     * @return $this
+     */
+    public function asLoose(): UntrustedValue
+    {
+        return $this;
+    }
+
+    /**
      * Returns the value as an int.
      *
      * Besides an int, these are converted too:
