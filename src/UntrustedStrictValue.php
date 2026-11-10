@@ -16,58 +16,6 @@ namespace Puggan\UntrustedValue;
 final class UntrustedStrictValue extends AbstractUntrustedValue
 {
     /**
-     * @return $this
-     */
-    public function asStrict(): UntrustedStrictValue
-    {
-        return $this;
-    }
-
-    /**
-     * @return UntrustedValue<TValue> A copy with the same value and path.
-     */
-    public function asLoose(): UntrustedValue
-    {
-        return new UntrustedValue($this->value, $this->path);
-    }
-
-    /**
-     * The value, when it is an int, wrapped as a new UntrustedStrictValue with the same path.
-     *
-     * @return ($nullable is false ? UntrustedStrictValue<int&TValue> : UntrustedStrictValue<(int|null)&TValue>)
-     *
-     * @throws WrongTypeException When int() throws.
-     */
-    public function asInt(bool $nullable = true): UntrustedStrictValue
-    {
-        return new UntrustedStrictValue($this->int(nullable: $nullable), $this->path);
-    }
-
-    /**
-     * The value, when it is a string, wrapped as a new UntrustedStrictValue with the same path.
-     *
-     * @return ($nullable is false ? UntrustedStrictValue<string&TValue> : UntrustedStrictValue<(string|null)&TValue>)
-     *
-     * @throws WrongTypeException When string() throws.
-     */
-    public function asString(bool $nullable = true): UntrustedStrictValue
-    {
-        return new UntrustedStrictValue($this->string(nullable: $nullable), $this->path);
-    }
-
-    /**
-     * The value, when it is a bool, wrapped as a new UntrustedStrictValue with the same path.
-     *
-     * @return ($nullable is false ? UntrustedStrictValue<bool&TValue> : UntrustedStrictValue<(bool|null)&TValue>)
-     *
-     * @throws WrongTypeException When bool() throws.
-     */
-    public function asBool(bool $nullable = true): UntrustedStrictValue
-    {
-        return new UntrustedStrictValue($this->bool(nullable: $nullable), $this->path);
-    }
-
-    /**
      * Returns the value as an int. Only an int is accepted.
      *
      * @return ($nullable is false ? int&TValue : (int|null)&TValue)
@@ -177,5 +125,57 @@ final class UntrustedStrictValue extends AbstractUntrustedValue
         }
 
         return $this->value;
+    }
+
+    /**
+     * @return $this
+     */
+    public function asStrict(): UntrustedStrictValue
+    {
+        return $this;
+    }
+
+    /**
+     * @return UntrustedValue<TValue> A copy with the same value and path.
+     */
+    public function asLoose(): UntrustedValue
+    {
+        return new UntrustedValue($this->value, $this->path);
+    }
+
+    /**
+     * The value, when it is an int, wrapped as a new UntrustedStrictValue with the same path.
+     *
+     * @return ($nullable is false ? UntrustedStrictValue<int&TValue> : UntrustedStrictValue<(int|null)&TValue>)
+     *
+     * @throws WrongTypeException When int() throws.
+     */
+    public function asInt(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->int(nullable: $nullable), $this->path);
+    }
+
+    /**
+     * The value, when it is a string, wrapped as a new UntrustedStrictValue with the same path.
+     *
+     * @return ($nullable is false ? UntrustedStrictValue<string&TValue> : UntrustedStrictValue<(string|null)&TValue>)
+     *
+     * @throws WrongTypeException When string() throws.
+     */
+    public function asString(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->string(nullable: $nullable), $this->path);
+    }
+
+    /**
+     * The value, when it is a bool, wrapped as a new UntrustedStrictValue with the same path.
+     *
+     * @return ($nullable is false ? UntrustedStrictValue<bool&TValue> : UntrustedStrictValue<(bool|null)&TValue>)
+     *
+     * @throws WrongTypeException When bool() throws.
+     */
+    public function asBool(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->bool(nullable: $nullable), $this->path);
     }
 }

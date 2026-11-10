@@ -16,6 +16,218 @@ namespace Puggan\UntrustedValue;
 final class UntrustedValue extends AbstractUntrustedValue
 {
     /**
+     * Returns the value as an int.
+     *
+     * Besides an int, these are converted too:
+     * - a float within 0.001 above a whole number, like 42.0 or 42.0004;
+     * - a numeric string (see is_numeric()), like "42", " 42", "+42", "042" or "1e3",
+     *   following the same rule once it is read as a number.
+     * Either way the result has to fit in an int.
+     *
+     * The return type follows TValue where it can: a TValue that is already an int (or ?int when
+     * nullable) is returned as is, and otherwise the result is int, or ?int when null is both
+     * allowed and possible.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? (TValue is int ? TValue : int)
+     *     : (TValue is int|null ? TValue : (TValue is scalar|array|object|resource ? int : int|null))
+     * )
+     *
+     * @throws WrongTypeException When the value can't be converted to an int, or is null when not allowed.
+     */
+    public function int(bool $nullable = true): ?int
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('int');
+            }
+
+            return null;
+        }
+
+        if (!is_scalar($this->value)) {
+            throw $this->wrongType('int');
+        }
+
+        if (is_int($this->value)) {
+            return $this->value;
+        }
+
+        if (is_float($this->value)) {
+            return $this->floatToInt($this->value);
+        }
+
+        if (!is_string($this->value)) {
+            throw $this->wrongType('int');
+        }
+
+        if (!is_numeric($this->value)) {
+            throw $this->wrongType('int', 'non-numeric-string');
+        }
+
+        $number = +$this->value;
+
+        return is_int($number) ? $number : $this->floatToInt($number);
+    }
+
+    /**
+     * Returns the value as a float.
+     *
+     * Ints are widened to float. A numeric string (see is_numeric()), like "4.2", " 4.2" or "1e3",
+     * is converted too, as long as it gives a finite float.
+     *
+     * The return type follows TValue where it can: a TValue that is already a float (or ?float when
+     * nullable) is returned as is, and otherwise the result is float, or ?float when null is both
+     * allowed and possible.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? (TValue is float ? TValue : float)
+     *     : (TValue is float|null ? TValue : (TValue is scalar|array|object|resource ? float : float|null))
+     * )
+     *
+     * @throws WrongTypeException When the value can't be converted to a float, or is null when not allowed.
+     */
+    public function float(bool $nullable = true): ?float
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('float');
+            }
+
+            return null;
+        }
+
+        if (!is_scalar($this->value)) {
+            throw $this->wrongType('float');
+        }
+
+        if (is_float($this->value)) {
+            return $this->value;
+        }
+
+        if (is_int($this->value)) {
+            return (float) $this->value;
+        }
+
+        if (!is_string($this->value)) {
+            throw $this->wrongType('float');
+        }
+
+        if (!is_numeric($this->value)) {
+            throw $this->wrongType('float', 'non-numeric-string');
+        }
+
+        $float = (float) $this->value;
+
+        if (!is_finite($float)) {
+            throw $this->wrongType('float', 'non-finite-numeric-string');
+        }
+
+        return $float;
+    }
+
+    /**
+     * Returns the value as a string.
+     *
+     * Besides a string, an int or a finite float is converted too, the way PHP casts it, like "42",
+     * "4.2" or "1.0E+25". Bools are never converted.
+     *
+     * The return type follows TValue where it can: a TValue that is already a string (or ?string
+     * when nullable) is returned as is, and otherwise the result is string, or ?string when null is
+     * both allowed and possible.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? (TValue is string ? TValue : string)
+     *     : (TValue is string|null ? TValue : (TValue is scalar|array|object|resource ? string : string|null))
+     * )
+     *
+     * @throws WrongTypeException When the value can't be converted to a string, or is null when not allowed.
+     */
+    public function string(bool $nullable = true): ?string
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('string');
+            }
+
+            return null;
+        }
+
+        if (!is_scalar($this->value)) {
+            throw $this->wrongType('string');
+        }
+
+        if (is_string($this->value)) {
+            return $this->value;
+        }
+
+        if (is_bool($this->value)) {
+            throw $this->wrongType('string');
+        }
+
+        if (is_float($this->value) && !is_finite($this->value)) {
+            throw $this->wrongType('string', 'non-finite-float');
+        }
+
+        return (string) $this->value;
+    }
+
+    /**
+     * Returns the value as a bool.
+     *
+     * Besides a bool, these are converted too: the ints 1 and 0, and the strings "1", "true",
+     * "yes" and "on" or "0", "false", "no" and "off", in any case, as checkboxes and query strings
+     * send them.
+     *
+     * The return type follows TValue where it can: a TValue that is already a bool (or ?bool when
+     * nullable) is returned as is, and otherwise the result is bool, or ?bool when null is both
+     * allowed and possible.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? (TValue is bool ? TValue : bool)
+     *     : (TValue is bool|null ? TValue : (TValue is scalar|array|object|resource ? bool : bool|null))
+     * )
+     *
+     * @throws WrongTypeException When the value can't be converted to a bool, or is null when not allowed.
+     */
+    public function bool(bool $nullable = true): ?bool
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('bool');
+            }
+
+            return null;
+        }
+
+        if (is_bool($this->value)) {
+            return $this->value;
+        }
+
+        if (is_int($this->value)) {
+            return match ($this->value) {
+                1 => true,
+                0 => false,
+                default => throw $this->wrongType('bool', 'non-boolean-int'),
+            };
+        }
+
+        if (!is_string($this->value)) {
+            throw $this->wrongType('bool');
+        }
+
+        return match (strtolower($this->value)) {
+            '1', 'true', 'yes', 'on' => true,
+            '0', 'false', 'no', 'off' => false,
+            default => throw $this->wrongType('bool', 'non-boolean-string'),
+        };
+    }
+
+    /**
      * @return UntrustedStrictValue<TValue> A copy with the same value and path.
      */
     public function asStrict(): UntrustedStrictValue
@@ -77,215 +289,6 @@ final class UntrustedValue extends AbstractUntrustedValue
     public function asBool(bool $nullable = true): UntrustedStrictValue
     {
         return new UntrustedStrictValue($this->bool(nullable: $nullable), $this->path);
-    }
-
-    /**
-     * Returns the value as an int.
-     *
-     * Besides an int, these are converted too:
-     * - a float within 0.001 above a whole number, like 42.0 or 42.0004;
-     * - a numeric string (see is_numeric()), like "42", " 42", "+42", "042" or "1e3",
-     *   following the same rule once it is read as a number.
-     * Either way the result has to fit in an int.
-     *
-     * The return type follows TValue where it can: a TValue that is already an int (or ?int when
-     * nullable) is returned as is, and otherwise the result is int, or ?int when null is both
-     * allowed and possible.
-     *
-     * @return (
-     *     $nullable is false
-     *     ? (TValue is int ? TValue : int)
-     *     : (TValue is int|null ? TValue : (TValue is scalar|array|object|resource ? int : int|null))
-     * )
-     *
-     * @throws WrongTypeException When the value can't be converted to an int, or is null when not allowed.
-     */
-    public function int(bool $nullable = true): ?int
-    {
-        if ($this->value === null) {
-            if (!$nullable) {
-                throw $this->wrongType('int');
-            }
-
-            return null;
-        }
-
-        if (!is_scalar($this->value)) {
-            throw $this->wrongType('int');
-        }
-
-        if (is_int($this->value)) {
-            return $this->value;
-        }
-
-        if (is_float($this->value)) {
-            return $this->floatToInt($this->value);
-        }
-
-        if (!is_string($this->value)) {
-            throw $this->wrongType('int');
-        }
-
-        if (!is_numeric($this->value)) {
-            throw $this->wrongType('int', 'non-numeric-string');
-        }
-
-        $number = +$this->value;
-
-        return is_int($number) ? $number : $this->floatToInt($number);
-    }
-    /**
-     * Returns the value as a float.
-     *
-     * Ints are widened to float. A numeric string (see is_numeric()), like "4.2", " 4.2" or "1e3",
-     * is converted too, as long as it gives a finite float.
-     *
-     * The return type follows TValue where it can: a TValue that is already a float (or ?float when
-     * nullable) is returned as is, and otherwise the result is float, or ?float when null is both
-     * allowed and possible.
-     *
-     * @return (
-     *     $nullable is false
-     *     ? (TValue is float ? TValue : float)
-     *     : (TValue is float|null ? TValue : (TValue is scalar|array|object|resource ? float : float|null))
-     * )
-     *
-     * @throws WrongTypeException When the value can't be converted to a float, or is null when not allowed.
-     */
-    public function float(bool $nullable = true): ?float
-    {
-        if ($this->value === null) {
-            if (!$nullable) {
-                throw $this->wrongType('float');
-            }
-
-            return null;
-        }
-
-        if (!is_scalar($this->value)) {
-            throw $this->wrongType('float');
-        }
-
-        if (is_float($this->value)) {
-            return $this->value;
-        }
-
-        if (is_int($this->value)) {
-            return (float) $this->value;
-        }
-
-        if (!is_string($this->value)) {
-            throw $this->wrongType('float');
-        }
-
-        if (!is_numeric($this->value)) {
-            throw $this->wrongType('float', 'non-numeric-string');
-        }
-
-        $float = (float) $this->value;
-
-        if (!is_finite($float)) {
-            throw $this->wrongType('float', 'non-finite-numeric-string');
-        }
-
-        return $float;
-    }
-    /**
-     * Returns the value as a string.
-     *
-     * Besides a string, an int or a finite float is converted too, the way PHP casts it, like "42",
-     * "4.2" or "1.0E+25". Bools are never converted.
-     *
-     * The return type follows TValue where it can: a TValue that is already a string (or ?string
-     * when nullable) is returned as is, and otherwise the result is string, or ?string when null is
-     * both allowed and possible.
-     *
-     * @return (
-     *     $nullable is false
-     *     ? (TValue is string ? TValue : string)
-     *     : (TValue is string|null ? TValue : (TValue is scalar|array|object|resource ? string : string|null))
-     * )
-     *
-     * @throws WrongTypeException When the value can't be converted to a string, or is null when not allowed.
-     */
-    public function string(bool $nullable = true): ?string
-    {
-        if ($this->value === null) {
-            if (!$nullable) {
-                throw $this->wrongType('string');
-            }
-
-            return null;
-        }
-
-        if (!is_scalar($this->value)) {
-            throw $this->wrongType('string');
-        }
-
-        if (is_string($this->value)) {
-            return $this->value;
-        }
-
-        if (is_bool($this->value)) {
-            throw $this->wrongType('string');
-        }
-
-        if (is_float($this->value) && !is_finite($this->value)) {
-            throw $this->wrongType('string', 'non-finite-float');
-        }
-
-        return (string) $this->value;
-    }
-    /**
-     * Returns the value as a bool.
-     *
-     * Besides a bool, these are converted too: the ints 1 and 0, and the strings "1", "true",
-     * "yes" and "on" or "0", "false", "no" and "off", in any case, as checkboxes and query strings
-     * send them.
-     *
-     * The return type follows TValue where it can: a TValue that is already a bool (or ?bool when
-     * nullable) is returned as is, and otherwise the result is bool, or ?bool when null is both
-     * allowed and possible.
-     *
-     * @return (
-     *     $nullable is false
-     *     ? (TValue is bool ? TValue : bool)
-     *     : (TValue is bool|null ? TValue : (TValue is scalar|array|object|resource ? bool : bool|null))
-     * )
-     *
-     * @throws WrongTypeException When the value can't be converted to a bool, or is null when not allowed.
-     */
-    public function bool(bool $nullable = true): ?bool
-    {
-        if ($this->value === null) {
-            if (!$nullable) {
-                throw $this->wrongType('bool');
-            }
-
-            return null;
-        }
-
-        if (is_bool($this->value)) {
-            return $this->value;
-        }
-
-        if (is_int($this->value)) {
-            return match ($this->value) {
-                1 => true,
-                0 => false,
-                default => throw $this->wrongType('bool', 'non-boolean-int'),
-            };
-        }
-
-        if (!is_string($this->value)) {
-            throw $this->wrongType('bool');
-        }
-
-        return match (strtolower($this->value)) {
-            '1', 'true', 'yes', 'on' => true,
-            '0', 'false', 'no', 'off' => false,
-            default => throw $this->wrongType('bool', 'non-boolean-string'),
-        };
     }
 
     /**

@@ -115,6 +115,430 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     abstract public function bool(bool $nullable = true): ?bool;
 
     /**
+     * The value as a case of the backed enum $enum, found with tryFrom(). The value is first read
+     * with int() or string(), matching the enum's backing type, so UntrustedValue accepts "2" for
+     * an int-backed case while UntrustedStrictValue requires the exact type.
+     *
+     * @template TEnum of \BackedEnum
+     *
+     * @param class-string<TEnum> $enum
+     *
+     * @return ($nullable is false ? TEnum : TEnum|null)
+     *
+     * @throws WrongTypeException When the value can't be read as the backing type, or is null when not allowed.
+     * @throws InvalidTypeException When the value is not one of the enum's backing values.
+     */
+    public function enum(string $enum, bool $nullable = true): ?\BackedEnum
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType($enum);
+            }
+
+            return null;
+        }
+
+        // No new \ReflectionEnum($enum)->getBackingType(): that syntax needs PHP 8.4, src/ supports 8.1.
+        $reflection = new \ReflectionEnum($enum);
+        $backingValue = (string) $reflection->getBackingType() === 'int'
+            ? $this->int(false)
+            : $this->string(false);
+
+        return $enum::tryFrom($backingValue) ?? throw $this->invalid('enum', sprintf(
+            'one of %s',
+            implode(', ', array_map(static fn(\BackedEnum $case): string => var_export($case->value, true), $enum::cases())),
+        ));
+    }
+
+    /**
+     * The value as a date, parsed with DateTimeImmutable::createFromFormat() in $format. The value
+     * is read with string(), so UntrustedStrictValue requires a string. Unlike createFromFormat()
+     * itself, a date that only parses by rolling over, like 2026-02-30 becoming 2026-03-02, is
+     * rejected, as is anything else PHP warns about.
+     *
+     * Fields the format leaves out are taken from the current time, as createFromFormat() does;
+     * start the format with "!" to reset them instead, like "!Y-m-d" for midnight.
+     *
+     * @return ($nullable is false ? \DateTimeImmutable : \DateTimeImmutable|null)
+     *
+     * @throws WrongTypeException When string() can't return a string, or the value is null when not allowed.
+     * @throws InvalidTypeException When the string is not a valid date in $format.
+     */
+    public function date(string $format, bool $nullable = true, ?\DateTimeZone $timezone = null): ?\DateTimeImmutable
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('date');
+            }
+
+            return null;
+        }
+
+        $date = \DateTimeImmutable::createFromFormat($format, $this->string(false), $timezone);
+        $errors = \DateTimeImmutable::getLastErrors();
+
+        // PHP 8.2+ returns false when there is nothing to report, 8.1 an array of zero counts.
+        $failed = $errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0);
+
+        if ($date === false || $failed) {
+            throw $this->invalid('date', sprintf('a date in the format %s', $format));
+        }
+
+        return $date;
+    }
+
+    /**
+     * Returns the raw value, unchanged and unchecked. For a filter() or map() result, that is the
+     * generator of wrapped items.
+     *
+     * @return TValue
+     */
+    public function raw(): mixed
+    {
+        return $this->value;
+    }
+
+    /**
+     * Whether int() with the same $nullable would return an int instead of throwing.
+     */
+    public function isInt(bool $nullable = true): bool
+    {
+        try {
+            $this->int($nullable);
+
+            return true;
+        } catch (WrongTypeException) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether float() with the same $nullable would return a float instead of throwing.
+     */
+    public function isFloat(bool $nullable = true): bool
+    {
+        try {
+            $this->float($nullable);
+
+            return true;
+        } catch (WrongTypeException) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether string() with the same $nullable would return a string instead of throwing.
+     */
+    public function isString(bool $nullable = true): bool
+    {
+        try {
+            $this->string($nullable);
+
+            return true;
+        } catch (WrongTypeException) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether bool() with the same $nullable would return a bool instead of throwing.
+     */
+    public function isBool(bool $nullable = true): bool
+    {
+        try {
+            $this->bool($nullable);
+
+            return true;
+        } catch (WrongTypeException) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether the value is null.
+     */
+    public function isNull(): bool
+    {
+        return $this->value === null;
+    }
+
+    /**
+     * Whether the value is an int, float, string or bool, or null when $nullable.
+     */
+    public function isScalar(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        return is_scalar($this->value);
+    }
+
+    /**
+     * Whether the value is iterable (see is_iterable()): an array or a Traversable object, or null
+     * when $nullable. A plain object like a \stdClass is not iterable, even though foreach over this
+     * object, or yieldList(), still reads its public properties.
+     */
+    public function isIterable(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        return is_iterable($this->value);
+    }
+
+    /**
+     * Whether the value is an object, or null when $nullable.
+     */
+    public function isObject(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        return is_object($this->value);
+    }
+
+    /**
+     * Whether the value is an array, list or not, or null when $nullable.
+     */
+    public function isArray(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        return is_array($this->value);
+    }
+
+    /**
+     * Whether the value is a list, an array with keys 0, 1, 2, … in order, or null when $nullable.
+     * An empty array is a list.
+     */
+    public function isList(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        if (!is_array($this->value)) {
+            return false;
+        }
+
+        return array_is_list($this->value);
+    }
+
+    /**
+     * Whether the value is a map: an array that is not a list. An empty array is a list, so it is
+     * not a map. Null passes when $nullable.
+     */
+    public function isMap(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        if (!is_array($this->value)) {
+            return false;
+        }
+
+        return !array_is_list($this->value);
+    }
+
+    /**
+     * Whether the value has the property: a public property of an object, or a key of an array.
+     * Other values have no properties, so it is false for them.
+     */
+    public function hasProperty(string $name): bool
+    {
+        $properties = $this->properties();
+
+        return $properties !== null && array_key_exists($name, $properties);
+    }
+
+    /**
+     * Whether the value can have named properties: an object, or an array that is not a list.
+     * An empty array is a list, so it does not count. Null passes when $nullable.
+     */
+    public function hasProperties(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        if (is_object($this->value)) {
+            return true;
+        }
+
+        if (!is_array($this->value)) {
+            return false;
+        }
+
+        return !array_is_list($this->value);
+    }
+
+    /**
+     * This object, when the value is null.
+     *
+     * @return static<null&TValue>
+     *
+     * @throws WrongTypeException When the value is not null.
+     */
+    public function requireNull(): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        throw $this->wrongType('null');
+    }
+
+    /**
+     * This object, when isScalar() with the same $nullable is true.
+     *
+     * @return ($nullable is false ? static<scalar&TValue> : static<(scalar|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not an int, float, string or bool, or is null when not allowed.
+     */
+    public function requireScalar(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('scalar');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsScalar()) {
+            return $this;
+        }
+
+        throw $this->wrongType('scalar');
+    }
+
+    /**
+     * This object, when isArray() with the same $nullable is true.
+     *
+     * @return ($nullable is false ? static<array<mixed>&TValue> : static<(array<mixed>|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not an array, or is null when not allowed.
+     */
+    public function requireArray(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('array');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsArray()) {
+            return $this;
+        }
+
+        throw $this->wrongType('array');
+    }
+
+    /**
+     * This object, when isObject() with the same $nullable is true.
+     *
+     * @return ($nullable is false ? static<object&TValue> : static<(object|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not an object, or is null when not allowed.
+     */
+    public function requireObject(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('object');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsObject()) {
+            return $this;
+        }
+
+        throw $this->wrongType('object');
+    }
+
+    /**
+     * This object, when isList() with the same $nullable is true.
+     *
+     * @return ($nullable is false ? static<list<mixed>&TValue> : static<(list<mixed>|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not a list, or is null when not allowed.
+     */
+    public function requireList(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('list');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsList()) {
+            return $this;
+        }
+
+        throw $this->wrongType('list', is_array($this->value) ? 'map' : null);
+    }
+
+    /**
+     * This object, when isMap() with the same $nullable is true. PHPStan has no type for an array
+     * that is not a list, so TValue is only narrowed to its array part.
+     *
+     * @return ($nullable is false ? static<array<mixed>&TValue> : static<(array<mixed>|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not a map, or is null when not allowed.
+     */
+    public function requireMap(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('map');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsList()) {
+            throw $this->wrongType('map', 'list');
+        }
+
+        if ($this->valueIsArray()) {
+            return $this;
+        }
+
+        throw $this->wrongType('map');
+    }
+
+    /**
+     * This object, when hasProperty() is true.
+     *
+     * @return $this
+     *
+     * @throws WrongTypeException When the value is neither an object nor an array.
+     * @throws InvalidTypeException When the property is missing.
+     */
+    public function requireProperty(string $name): static
+    {
+        $properties = $this->properties() ?? throw $this->wrongType('object|array');
+
+        if (!array_key_exists($name, $properties)) {
+            throw $this->missingProperty($name);
+        }
+
+        return $this;
+    }
+
+    /**
      * This value as an UntrustedStrictValue, where int(), float(), string(), bool() and the methods
      * built on them only accept the exact type. Returns the same object when it already is one,
      * otherwise a copy with the same value and path.
@@ -318,6 +742,342 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * The value decoded as JSON, for a field that holds a JSON string, as a new object of the same
+     * class and path, so the decoded fields get paths like "payload.id". JSON objects become
+     * \stdClass objects, as in fromJson(). The value is read with string(), so
+     * UntrustedStrictValue requires a string. Null returns this object.
+     *
+     * @return static<mixed>
+     *
+     * @throws WrongTypeException When string() can't return a string, or the string is not valid JSON.
+     */
+    public function json(): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        return new static(self::decodeJson($this->string(false), $this->path), $this->path);
+    }
+
+    /**
+     * This object, when the value is not below $min and not above $max. A null bound is not
+     * checked, and a null value passes. The comparison is PHP's < and >, so the value's type is not
+     * checked here; convert it first, e.g. with asInt().
+     *
+     * @return $this
+     *
+     * @throws InvalidTypeException When the value is below $min or above $max.
+     */
+    public function range(int|float|string|null $min = null, int|float|string|null $max = null): static
+    {
+        if ($this->value === null) {
+            return $this;
+        }
+
+        if ($min !== null && $this->value < $min) {
+            throw $this->invalid('min', sprintf('at least %s', $min));
+        }
+
+        if ($max !== null && $this->value > $max) {
+            throw $this->invalid('max', sprintf('at most %s', $max));
+        }
+
+        return $this;
+    }
+
+    /**
+     * This object, when string() of the value is between $min and $max characters long, both
+     * inclusive. A null $max means no upper limit. Characters are counted with mb_strlen(), so
+     * "Thorbjörn" is 9 long, not 10. In UntrustedValue an int like 700 is measured as "700".
+     * Null has no length to check, so it passes.
+     *
+     * @return $this
+     *
+     * @throws WrongTypeException When string() can't return a string or null.
+     * @throws InvalidTypeException When the string is shorter than $min or longer than $max.
+     */
+    public function length(?int $max = null, int $min = 0): static
+    {
+        $string = $this->string();
+
+        if ($string === null) {
+            return $this;
+        }
+
+        $length = mb_strlen($string);
+
+        if ($length < $min) {
+            throw $this->invalid('minLength', sprintf('at least %d characters', $min));
+        }
+
+        if ($max !== null && $length > $max) {
+            throw $this->invalid('maxLength', sprintf('at most %d characters', $max));
+        }
+
+        return $this;
+    }
+
+    /**
+     * This object, when the value has between $min and $max items, both inclusive. A null $max
+     * means no upper limit. Arrays and Countable objects are counted with count(), and other
+     * objects by their public properties. Null has no count to check, so it passes.
+     *
+     * Counting a generator or other iterator that is not Countable uses it up, so for those the
+     * items are first collected into an array (keys must be int or string), and a new object of the
+     * same class and path holding that array is returned. Items that already are untrusted values,
+     * as from filter() or map(), keep their own paths.
+     *
+     * @return $this|static<array<array-key, mixed>>
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an iterator yields a key that is not an int or string.
+     * @throws InvalidTypeException When there are fewer than $min or more than $max items.
+     */
+    public function count(?int $max = null, int $min = 0): static
+    {
+        if ($this->value === null) {
+            return $this;
+        }
+
+        $counted = $this;
+        if (is_array($this->value) || $this->value instanceof \Countable) {
+            $count = count($this->value);
+        } elseif ($this->value instanceof \Traversable) {
+            $items = $this->traversableToArray($this->value);
+            $counted = new static($items, $this->path);
+            $count = count($items);
+        } elseif (is_object($this->value)) {
+            $count = count(get_object_vars($this->value));
+        } else {
+            throw $this->wrongType('array|object');
+        }
+
+        if ($count < $min) {
+            throw $this->invalid('minCount', sprintf('at least %d items', $min));
+        }
+
+        if ($max !== null && $count > $max) {
+            throw $this->invalid('maxCount', sprintf('at most %d items', $max));
+        }
+
+        return $counted;
+    }
+
+    /**
+     * This object, when the value is identical (===) to one of $allowed. The value is not converted
+     * first, so in UntrustedValue "1" does not match 1; convert it first, e.g. ->asInt()->oneOf().
+     * Null has nothing to check, so it passes. TValue narrows to the type of the allowed values;
+     * PHPStan widens literals like 'asc' to string for a method template.
+     *
+     * @template TAllowed
+     *
+     * @param array<array-key, TAllowed> $allowed
+     *
+     * @return static<(TAllowed&TValue)|(null&TValue)>
+     *
+     * @throws InvalidTypeException When the value is not one of $allowed.
+     */
+    public function oneOf(array $allowed): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        if ($this->valueIsOneOf($allowed)) {
+            return $this;
+        }
+
+        throw $this->invalid('oneOf', sprintf(
+            'one of %s',
+            implode(', ', array_map(
+                static fn(mixed $option): string => is_scalar($option) ? var_export($option, true) : get_debug_type($option),
+                $allowed,
+            )),
+        ));
+    }
+
+    /**
+     * This object, when string() of the value matches $regexp (see preg_match()). So in
+     * UntrustedValue an int like 700 is checked as "700", while UntrustedStrictValue requires a
+     * string. Null is rejected.
+     *
+     * @return $this
+     *
+     * @throws WrongTypeException When string() can't return a string.
+     * @throws InvalidTypeException When the string does not match, or PCRE fails on it.
+     * @throws \InvalidArgumentException When $regexp is not a valid pattern.
+     */
+    public function match(string $regexp): static
+    {
+        if (!$this->pregMatch($this->string(false), $regexp, 'match')) {
+            throw $this->invalid('match', sprintf('a match for %s', $regexp));
+        }
+
+        return $this;
+    }
+
+    /**
+     * This object, when string() of the value does not match $regexp (see preg_match()). So in
+     * UntrustedValue an int like 700 is checked as "700". A value string() can't return a string
+     * for, like null, an array or, in UntrustedStrictValue, an int, can't match, so it passes.
+     *
+     * @return $this
+     *
+     * @throws InvalidTypeException When the string matches, or PCRE fails on it.
+     * @throws \InvalidArgumentException When $regexp is not a valid pattern.
+     */
+    public function notMatch(string $regexp): static
+    {
+        if (!$this->isString(false)) {
+            return $this;
+        }
+
+        if ($this->pregMatch($this->string(false), $regexp, 'notMatch')) {
+            throw $this->invalid('notMatch', sprintf('no match for %s', $regexp));
+        }
+
+        return $this;
+    }
+
+    /**
+     * The value with whitespace trimmed from both ends, as trim() does. Returns this object when
+     * the value is not a string or has nothing to trim, otherwise a new object of the same class
+     * and path.
+     *
+     * A string TValue becomes plain string, as trimming can change it, e.g. to an empty string.
+     *
+     * @return static<(
+     *     TValue is int|float|bool|array|object|resource|null
+     *     ? TValue
+     *     : ((int|float|bool|array|object|resource|null)&TValue)|string
+     * )>
+     */
+    public function trim(): static
+    {
+        if (!$this->valueIsString()) {
+            return $this;
+        }
+
+        $trimmed = trim($this->value);
+
+        if ($trimmed === $this->value) {
+            return $this;
+        }
+
+        return new static($trimmed, $this->path);
+    }
+
+    /**
+     * A new object of the same class and path holding $to, when the value is identical (===) to
+     * $from, otherwise this object.
+     *
+     * @template TTo
+     *
+     * @param TTo $to
+     *
+     * @return static<TValue|TTo>
+     */
+    public function replace(mixed $from, mixed $to): static
+    {
+        if ($this->value !== $from && $this->keepsTValue()) {
+            return $this;
+        }
+
+        return new static($to, $this->path);
+    }
+
+    /**
+     * Replaces null with $defaultValue, as replace(null, $defaultValue) does.
+     *
+     * @template TDefault
+     *
+     * @param TDefault $defaultValue
+     *
+     * @return static<((int|float|string|bool|array<mixed>|object|resource)&TValue)|TDefault>
+     */
+    public function default(mixed $defaultValue): static
+    {
+        if ($this->valueIsNotNull()) {
+            return $this;
+        }
+
+        return new static($defaultValue, $this->path);
+    }
+
+    /**
+     * Replaces an empty string with $defaultValue, as replace('', $defaultValue) does. A string of
+     * only whitespace is not empty; use trim() first for that.
+     *
+     * @template TDefault
+     *
+     * @param TDefault $defaultValue
+     *
+     * @return static<TValue|TDefault>
+     */
+    public function blankDefault(mixed $defaultValue = null): static
+    {
+        return $this->replace('', $defaultValue);
+    }
+
+    /**
+     * The value split on $separator (see explode()), as a new object of the same class and path
+     * holding a list of strings, so items get paths like "ids.2". The value is read with string(),
+     * so UntrustedStrictValue requires a string. An empty string gives an empty list rather than
+     * explode()'s [''], and null returns this object. For quoted fields, use csv().
+     *
+     * @param non-empty-string $separator
+     *
+     * @return static<list<string>|(null&TValue)>
+     *
+     * @throws WrongTypeException When string() can't return a string.
+     */
+    public function split(string $separator): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        $string = $this->string(false);
+
+        return new static($string === '' ? [] : explode($separator, $string), $this->path);
+    }
+
+    /**
+     * The value parsed as one CSV record (see str_getcsv()), as a new object of the same class and
+     * path holding a list of strings, so items get paths like "row.2". Unlike split(), a field in
+     * $enclosure can hold the separator, and a doubled $enclosure inside it is one literal one, like
+     * "say ""hi""". The value is read with string(), so UntrustedStrictValue requires a string. An
+     * empty string gives an empty list rather than str_getcsv()'s [null], and null returns this
+     * object.
+     *
+     * $escape defaults to '', as RFC 4180 has no escape character and PHP 8.4 deprecates relying on
+     * str_getcsv()'s old "\\" default. $separator and $enclosure must be one character each.
+     *
+     * @return static<list<string>|(null&TValue)>
+     *
+     * @throws WrongTypeException When string() can't return a string.
+     */
+    public function csv(string $separator = ',', string $enclosure = '"', string $escape = ''): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        $string = $this->string(false);
+
+        if ($string === '') {
+            return new static([], $this->path);
+        }
+
+        $fields = array_map(
+            static fn(?string $field): string => $field ?? '',
+            str_getcsv($string, $separator, $enclosure, $escape),
+        );
+
+        return new static($fields, $this->path);
+    }
+
+    /**
      * A property of an object value, or a key of an array value, as a new object of the same class.
      * Its path is this path plus the name, like "user.age".
      *
@@ -342,36 +1102,6 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         }
 
         return new static(null, $this->childPath($name));
-    }
-
-    /**
-     * Each item of an array or object value, indexed 0, 1, 2, …, as a new object of the same class
-     * whose path is this path plus the index, like "tags.0". The value is iterated directly, so an
-     * array or \stdClass is not copied: an array gives its items, a Traversable object (like an
-     * iterator) what it yields, and another object its public property values. The value is
-     * checked when this is called, not when iteration starts. Null gives no items when $nullable.
-     *
-     * @return \Generator<int, static<mixed>, mixed, void>
-     *
-     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
-     */
-    public function yieldList(bool $nullable = true): \Generator
-    {
-        return $this->yieldItems($this->iterable('list', $nullable), false);
-    }
-
-    /**
-     * Like yieldList(), but yields the original keys, and the paths use them, like "user.name". A
-     * Traversable object can yield keys of any type; one that is not an int or string shows its
-     * type in the path, like "user.[stdClass]".
-     *
-     * @return \Generator<mixed, static<mixed>, mixed, void>
-     *
-     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
-     */
-    public function yieldArray(bool $nullable = true): \Generator
-    {
-        return $this->yieldItems($this->iterable('array', $nullable), true);
     }
 
     /**
@@ -409,18 +1139,33 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Makes the value usable in foreach, giving what yieldArray() gives: each item with its key,
-     * as a new object of the same class whose path is this path plus the key. Null gives no items.
-     * PHP calls this when the foreach starts, so that is when a value that is neither an array nor
-     * an object throws.
+     * Each item of an array or object value, indexed 0, 1, 2, …, as a new object of the same class
+     * whose path is this path plus the index, like "tags.0". The value is iterated directly, so an
+     * array or \stdClass is not copied: an array gives its items, a Traversable object (like an
+     * iterator) what it yields, and another object its public property values. The value is
+     * checked when this is called, not when iteration starts. Null gives no items when $nullable.
+     *
+     * @return \Generator<int, static<mixed>, mixed, void>
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
+     */
+    public function yieldList(bool $nullable = true): \Generator
+    {
+        return $this->yieldItems($this->iterable('list', $nullable), false);
+    }
+
+    /**
+     * Like yieldList(), but yields the original keys, and the paths use them, like "user.name". A
+     * Traversable object can yield keys of any type; one that is not an int or string shows its
+     * type in the path, like "user.[stdClass]".
      *
      * @return \Generator<mixed, static<mixed>, mixed, void>
      *
-     * @throws WrongTypeException When the value is neither an array, an object nor null.
+     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
      */
-    public function getIterator(): \Generator
+    public function yieldArray(bool $nullable = true): \Generator
     {
-        return $this->yieldArray();
+        return $this->yieldItems($this->iterable('array', $nullable), true);
     }
 
     /**
@@ -591,31 +1336,6 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Yields the items of $mapper's result for each item of yieldArray(), one by one (yield from).
-     * Calls $mapper($item, $key) for each one: $item is the item, wrapped in this class with its
-     * own path, and $key its original key, which an iterator can make any type. It must return an
-     * iterable: another untrusted value, like $item->property('tags'), yields its items wrapped
-     * with their paths, and a plain array its values as they are.
-     *
-     * Keys come from each result, so they repeat across items; use iterator_to_array($generator,
-     * false) to collect them. The value is checked when this is called; $mapper runs during
-     * iteration, and an exception it throws comes through then. Null gives no items when $nullable.
-     *
-     * @template TKey
-     * @template TResult
-     *
-     * @param callable(static<mixed>, mixed): iterable<TKey, TResult> $mapper
-     *
-     * @return \Generator<TKey, TResult, mixed, void>
-     *
-     * @throws WrongTypeException When yieldArray() throws.
-     */
-    public function yieldFlatMap(callable $mapper, bool $nullable = true): \Generator
-    {
-        return $this->flatMapItems($this->yieldArray($nullable), $mapper);
-    }
-
-    /**
      * A list of $mapper's result for each item as it is, without wrapping, numbered 0, 1, 2, ….
      * Calls $mapper($item, $index) for each item of yieldList(): $item is the item, wrapped in this
      * class with its own path, and $index its position, from 0. An exception $mapper throws comes
@@ -656,6 +1376,31 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         }
 
         return $array;
+    }
+
+    /**
+     * Yields the items of $mapper's result for each item of yieldArray(), one by one (yield from).
+     * Calls $mapper($item, $key) for each one: $item is the item, wrapped in this class with its
+     * own path, and $key its original key, which an iterator can make any type. It must return an
+     * iterable: another untrusted value, like $item->property('tags'), yields its items wrapped
+     * with their paths, and a plain array its values as they are.
+     *
+     * Keys come from each result, so they repeat across items; use iterator_to_array($generator,
+     * false) to collect them. The value is checked when this is called; $mapper runs during
+     * iteration, and an exception it throws comes through then. Null gives no items when $nullable.
+     *
+     * @template TKey
+     * @template TResult
+     *
+     * @param callable(static<mixed>, mixed): iterable<TKey, TResult> $mapper
+     *
+     * @return \Generator<TKey, TResult, mixed, void>
+     *
+     * @throws WrongTypeException When yieldArray() throws.
+     */
+    public function yieldFlatMap(callable $mapper, bool $nullable = true): \Generator
+    {
+        return $this->flatMapItems($this->yieldArray($nullable), $mapper);
     }
 
     /**
@@ -787,49 +1532,6 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Yields each item of yieldArray(), with its key, as a scalar from requireScalar() with the
-     * same $nullable, so null items are kept unless $nullable is false. Unlike yieldArray(), a null
-     * value throws rather than giving no items. Items are converted during iteration, so a bad item
-     * throws then.
-     *
-     * @return ($nullable is false ? \Generator<mixed, scalar, mixed, void> : \Generator<mixed, scalar|null, mixed, void>)
-     *
-     * @throws WrongTypeException When the value is null or neither an array nor an object; a bad item throws during iteration.
-     */
-    public function yieldScalar(bool $nullable = true): \Generator
-    {
-        return $this->yieldRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
-    }
-
-    /**
-     * Each item of list(), as a scalar from requireScalar() with the same $nullable, so null items
-     * are kept unless $nullable is false. Unlike list(), a null value throws rather than giving an
-     * empty list.
-     *
-     * @return ($nullable is false ? list<scalar> : list<scalar|null>)
-     *
-     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
-     */
-    public function listScalar(bool $nullable = true): array
-    {
-        return $this->listRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
-    }
-
-    /**
-     * Each item of array(), with its key, as a scalar from requireScalar() with the same $nullable,
-     * so null items are kept unless $nullable is false. Unlike array(), a null value throws rather
-     * than giving an empty array.
-     *
-     * @return ($nullable is false ? array<array-key, scalar> : array<array-key, scalar|null>)
-     *
-     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
-     */
-    public function arrayScalar(bool $nullable = true): array
-    {
-        return $this->arrayRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
-    }
-
-    /**
      * Yields each item of yieldArray(), with its key, as a bool from bool() with the same
      * $nullable, so null items are kept unless $nullable is false. Unlike yieldArray(), a null
      * value throws rather than giving no items. Items are converted during iteration, so a bad item
@@ -873,755 +1575,63 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Whether the value has the property: a public property of an object, or a key of an array.
-     * Other values have no properties, so it is false for them.
+     * Yields each item of yieldArray(), with its key, as a scalar from requireScalar() with the
+     * same $nullable, so null items are kept unless $nullable is false. Unlike yieldArray(), a null
+     * value throws rather than giving no items. Items are converted during iteration, so a bad item
+     * throws then.
+     *
+     * @return ($nullable is false ? \Generator<mixed, scalar, mixed, void> : \Generator<mixed, scalar|null, mixed, void>)
+     *
+     * @throws WrongTypeException When the value is null or neither an array nor an object; a bad item throws during iteration.
      */
-    public function hasProperty(string $name): bool
+    public function yieldScalar(bool $nullable = true): \Generator
     {
-        $properties = $this->properties();
-
-        return $properties !== null && array_key_exists($name, $properties);
+        return $this->yieldRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
     }
 
     /**
-     * This object, when hasProperty() is true.
+     * Each item of list(), as a scalar from requireScalar() with the same $nullable, so null items
+     * are kept unless $nullable is false. Unlike list(), a null value throws rather than giving an
+     * empty list.
      *
-     * @return $this
+     * @return ($nullable is false ? list<scalar> : list<scalar|null>)
      *
-     * @throws WrongTypeException When the value is neither an object nor an array.
-     * @throws InvalidTypeException When the property is missing.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
-    public function requireProperty(string $name): static
+    public function listScalar(bool $nullable = true): array
     {
-        $properties = $this->properties() ?? throw $this->wrongType('object|array');
-
-        if (!array_key_exists($name, $properties)) {
-            throw $this->missingProperty($name);
-        }
-
-        return $this;
+        return $this->listRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
     }
 
     /**
-     * The value with whitespace trimmed from both ends, as trim() does. Returns this object when
-     * the value is not a string or has nothing to trim, otherwise a new object of the same class
-     * and path.
+     * Each item of array(), with its key, as a scalar from requireScalar() with the same $nullable,
+     * so null items are kept unless $nullable is false. Unlike array(), a null value throws rather
+     * than giving an empty array.
      *
-     * A string TValue becomes plain string, as trimming can change it, e.g. to an empty string.
+     * @return ($nullable is false ? array<array-key, scalar> : array<array-key, scalar|null>)
      *
-     * @return static<(
-     *     TValue is int|float|bool|array|object|resource|null
-     *     ? TValue
-     *     : ((int|float|bool|array|object|resource|null)&TValue)|string
-     * )>
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
-    public function trim(): static
+    public function arrayScalar(bool $nullable = true): array
     {
-        if (!$this->valueIsString()) {
-            return $this;
-        }
-
-        $trimmed = trim($this->value);
-
-        if ($trimmed === $this->value) {
-            return $this;
-        }
-
-        return new static($trimmed, $this->path);
+        return $this->arrayRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
     }
 
     /**
-     * A new object of the same class and path holding $to, when the value is identical (===) to
-     * $from, otherwise this object.
+     * Makes the value usable in foreach, giving what yieldArray() gives: each item with its key,
+     * as a new object of the same class whose path is this path plus the key. Null gives no items.
+     * PHP calls this when the foreach starts, so that is when a value that is neither an array nor
+     * an object throws.
      *
-     * @template TTo
+     * @return \Generator<mixed, static<mixed>, mixed, void>
      *
-     * @param TTo $to
-     *
-     * @return static<TValue|TTo>
+     * @throws WrongTypeException When the value is neither an array, an object nor null.
      */
-    public function replace(mixed $from, mixed $to): static
+    public function getIterator(): \Generator
     {
-        if ($this->value !== $from && $this->keepsTValue()) {
-            return $this;
-        }
-
-        return new static($to, $this->path);
+        return $this->yieldArray();
     }
 
-    /**
-     * Replaces null with $defaultValue, as replace(null, $defaultValue) does.
-     *
-     * @template TDefault
-     *
-     * @param TDefault $defaultValue
-     *
-     * @return static<((int|float|string|bool|array<mixed>|object|resource)&TValue)|TDefault>
-     */
-    public function default(mixed $defaultValue): static
-    {
-        if ($this->valueIsNotNull()) {
-            return $this;
-        }
-
-        return new static($defaultValue, $this->path);
-    }
-
-    /**
-     * Replaces an empty string with $defaultValue, as replace('', $defaultValue) does. A string of
-     * only whitespace is not empty; use trim() first for that.
-     *
-     * @template TDefault
-     *
-     * @param TDefault $defaultValue
-     *
-     * @return static<TValue|TDefault>
-     */
-    public function blankDefault(mixed $defaultValue = null): static
-    {
-        return $this->replace('', $defaultValue);
-    }
-
-    /**
-     * The value split on $separator (see explode()), as a new object of the same class and path
-     * holding a list of strings, so items get paths like "ids.2". The value is read with string(),
-     * so UntrustedStrictValue requires a string. An empty string gives an empty list rather than
-     * explode()'s [''], and null returns this object. For quoted fields, use csv().
-     *
-     * @param non-empty-string $separator
-     *
-     * @return static<list<string>|(null&TValue)>
-     *
-     * @throws WrongTypeException When string() can't return a string.
-     */
-    public function split(string $separator): static
-    {
-        if ($this->valueIsNull()) {
-            return $this;
-        }
-
-        $string = $this->string(false);
-
-        return new static($string === '' ? [] : explode($separator, $string), $this->path);
-    }
-
-    /**
-     * The value parsed as one CSV record (see str_getcsv()), as a new object of the same class and
-     * path holding a list of strings, so items get paths like "row.2". Unlike split(), a field in
-     * $enclosure can hold the separator, and a doubled $enclosure inside it is one literal one, like
-     * "say ""hi""". The value is read with string(), so UntrustedStrictValue requires a string. An
-     * empty string gives an empty list rather than str_getcsv()'s [null], and null returns this
-     * object.
-     *
-     * $escape defaults to '', as RFC 4180 has no escape character and PHP 8.4 deprecates relying on
-     * str_getcsv()'s old "\\" default. $separator and $enclosure must be one character each.
-     *
-     * @return static<list<string>|(null&TValue)>
-     *
-     * @throws WrongTypeException When string() can't return a string.
-     */
-    public function csv(string $separator = ',', string $enclosure = '"', string $escape = ''): static
-    {
-        if ($this->valueIsNull()) {
-            return $this;
-        }
-
-        $string = $this->string(false);
-
-        if ($string === '') {
-            return new static([], $this->path);
-        }
-
-        $fields = array_map(
-            static fn(?string $field): string => $field ?? '',
-            str_getcsv($string, $separator, $enclosure, $escape),
-        );
-
-        return new static($fields, $this->path);
-    }
-
-    /**
-     * This object, when the value is not below $min and not above $max. A null bound is not
-     * checked, and a null value passes. The comparison is PHP's < and >, so the value's type is not
-     * checked here; convert it first, e.g. with asInt().
-     *
-     * @return $this
-     *
-     * @throws InvalidTypeException When the value is below $min or above $max.
-     */
-    public function range(int|float|string|null $min = null, int|float|string|null $max = null): static
-    {
-        if ($this->value === null) {
-            return $this;
-        }
-
-        if ($min !== null && $this->value < $min) {
-            throw $this->invalid('min', sprintf('at least %s', $min));
-        }
-
-        if ($max !== null && $this->value > $max) {
-            throw $this->invalid('max', sprintf('at most %s', $max));
-        }
-
-        return $this;
-    }
-
-    /**
-     * This object, when the value has between $min and $max items, both inclusive. A null $max
-     * means no upper limit. Arrays and Countable objects are counted with count(), and other
-     * objects by their public properties. Null has no count to check, so it passes.
-     *
-     * Counting a generator or other iterator that is not Countable uses it up, so for those the
-     * items are first collected into an array (keys must be int or string), and a new object of the
-     * same class and path holding that array is returned. Items that already are untrusted values,
-     * as from filter() or map(), keep their own paths.
-     *
-     * @return $this|static<array<array-key, mixed>>
-     *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an iterator yields a key that is not an int or string.
-     * @throws InvalidTypeException When there are fewer than $min or more than $max items.
-     */
-    public function count(?int $max = null, int $min = 0): static
-    {
-        if ($this->value === null) {
-            return $this;
-        }
-
-        $counted = $this;
-        if (is_array($this->value) || $this->value instanceof \Countable) {
-            $count = count($this->value);
-        } elseif ($this->value instanceof \Traversable) {
-            $items = $this->traversableToArray($this->value);
-            $counted = new static($items, $this->path);
-            $count = count($items);
-        } elseif (is_object($this->value)) {
-            $count = count(get_object_vars($this->value));
-        } else {
-            throw $this->wrongType('array|object');
-        }
-
-        if ($count < $min) {
-            throw $this->invalid('minCount', sprintf('at least %d items', $min));
-        }
-
-        if ($max !== null && $count > $max) {
-            throw $this->invalid('maxCount', sprintf('at most %d items', $max));
-        }
-
-        return $counted;
-    }
-
-    /**
-     * This object, when string() of the value is between $min and $max characters long, both
-     * inclusive. A null $max means no upper limit. Characters are counted with mb_strlen(), so
-     * "Thorbjörn" is 9 long, not 10. In UntrustedValue an int like 700 is measured as "700".
-     * Null has no length to check, so it passes.
-     *
-     * @return $this
-     *
-     * @throws WrongTypeException When string() can't return a string or null.
-     * @throws InvalidTypeException When the string is shorter than $min or longer than $max.
-     */
-    public function length(?int $max = null, int $min = 0): static
-    {
-        $string = $this->string();
-
-        if ($string === null) {
-            return $this;
-        }
-
-        $length = mb_strlen($string);
-
-        if ($length < $min) {
-            throw $this->invalid('minLength', sprintf('at least %d characters', $min));
-        }
-
-        if ($max !== null && $length > $max) {
-            throw $this->invalid('maxLength', sprintf('at most %d characters', $max));
-        }
-
-        return $this;
-    }
-
-    /**
-     * This object, when the value is identical (===) to one of $allowed. The value is not converted
-     * first, so in UntrustedValue "1" does not match 1; convert it first, e.g. ->asInt()->oneOf().
-     * Null has nothing to check, so it passes. TValue narrows to the type of the allowed values;
-     * PHPStan widens literals like 'asc' to string for a method template.
-     *
-     * @template TAllowed
-     *
-     * @param array<array-key, TAllowed> $allowed
-     *
-     * @return static<(TAllowed&TValue)|(null&TValue)>
-     *
-     * @throws InvalidTypeException When the value is not one of $allowed.
-     */
-    public function oneOf(array $allowed): static
-    {
-        if ($this->valueIsNull()) {
-            return $this;
-        }
-
-        if ($this->valueIsOneOf($allowed)) {
-            return $this;
-        }
-
-        throw $this->invalid('oneOf', sprintf(
-            'one of %s',
-            implode(', ', array_map(
-                static fn(mixed $option): string => is_scalar($option) ? var_export($option, true) : get_debug_type($option),
-                $allowed,
-            )),
-        ));
-    }
-
-    /**
-     * This object, when string() of the value matches $regexp (see preg_match()). So in
-     * UntrustedValue an int like 700 is checked as "700", while UntrustedStrictValue requires a
-     * string. Null is rejected.
-     *
-     * @return $this
-     *
-     * @throws WrongTypeException When string() can't return a string.
-     * @throws InvalidTypeException When the string does not match, or PCRE fails on it.
-     * @throws \InvalidArgumentException When $regexp is not a valid pattern.
-     */
-    public function match(string $regexp): static
-    {
-        if (!$this->pregMatch($this->string(false), $regexp, 'match')) {
-            throw $this->invalid('match', sprintf('a match for %s', $regexp));
-        }
-
-        return $this;
-    }
-
-    /**
-     * This object, when string() of the value does not match $regexp (see preg_match()). So in
-     * UntrustedValue an int like 700 is checked as "700". A value string() can't return a string
-     * for, like null, an array or, in UntrustedStrictValue, an int, can't match, so it passes.
-     *
-     * @return $this
-     *
-     * @throws InvalidTypeException When the string matches, or PCRE fails on it.
-     * @throws \InvalidArgumentException When $regexp is not a valid pattern.
-     */
-    public function notMatch(string $regexp): static
-    {
-        if (!$this->isString(false)) {
-            return $this;
-        }
-
-        if ($this->pregMatch($this->string(false), $regexp, 'notMatch')) {
-            throw $this->invalid('notMatch', sprintf('no match for %s', $regexp));
-        }
-
-        return $this;
-    }
-
-    /**
-     * Returns the raw value, unchanged and unchecked. For a filter() or map() result, that is the
-     * generator of wrapped items.
-     *
-     * @return TValue
-     */
-    public function raw(): mixed
-    {
-        return $this->value;
-    }
-    /**
-     * The value as a case of the backed enum $enum, found with tryFrom(). The value is first read
-     * with int() or string(), matching the enum's backing type, so UntrustedValue accepts "2" for
-     * an int-backed case while UntrustedStrictValue requires the exact type.
-     *
-     * @template TEnum of \BackedEnum
-     *
-     * @param class-string<TEnum> $enum
-     *
-     * @return ($nullable is false ? TEnum : TEnum|null)
-     *
-     * @throws WrongTypeException When the value can't be read as the backing type, or is null when not allowed.
-     * @throws InvalidTypeException When the value is not one of the enum's backing values.
-     */
-    public function enum(string $enum, bool $nullable = true): ?\BackedEnum
-    {
-        if ($this->value === null) {
-            if (!$nullable) {
-                throw $this->wrongType($enum);
-            }
-
-            return null;
-        }
-
-        // No new \ReflectionEnum($enum)->getBackingType(): that syntax needs PHP 8.4, src/ supports 8.1.
-        $reflection = new \ReflectionEnum($enum);
-        $backingValue = (string) $reflection->getBackingType() === 'int'
-            ? $this->int(false)
-            : $this->string(false);
-
-        return $enum::tryFrom($backingValue) ?? throw $this->invalid('enum', sprintf(
-            'one of %s',
-            implode(', ', array_map(static fn(\BackedEnum $case): string => var_export($case->value, true), $enum::cases())),
-        ));
-    }
-
-    /**
-     * The value as a date, parsed with DateTimeImmutable::createFromFormat() in $format. The value
-     * is read with string(), so UntrustedStrictValue requires a string. Unlike createFromFormat()
-     * itself, a date that only parses by rolling over, like 2026-02-30 becoming 2026-03-02, is
-     * rejected, as is anything else PHP warns about.
-     *
-     * Fields the format leaves out are taken from the current time, as createFromFormat() does;
-     * start the format with "!" to reset them instead, like "!Y-m-d" for midnight.
-     *
-     * @return ($nullable is false ? \DateTimeImmutable : \DateTimeImmutable|null)
-     *
-     * @throws WrongTypeException When string() can't return a string, or the value is null when not allowed.
-     * @throws InvalidTypeException When the string is not a valid date in $format.
-     */
-    public function date(string $format, bool $nullable = true, ?\DateTimeZone $timezone = null): ?\DateTimeImmutable
-    {
-        if ($this->value === null) {
-            if (!$nullable) {
-                throw $this->wrongType('date');
-            }
-
-            return null;
-        }
-
-        $date = \DateTimeImmutable::createFromFormat($format, $this->string(false), $timezone);
-        $errors = \DateTimeImmutable::getLastErrors();
-
-        // PHP 8.2+ returns false when there is nothing to report, 8.1 an array of zero counts.
-        $failed = $errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0);
-
-        if ($date === false || $failed) {
-            throw $this->invalid('date', sprintf('a date in the format %s', $format));
-        }
-
-        return $date;
-    }
-
-    /**
-     * The value decoded as JSON, for a field that holds a JSON string, as a new object of the same
-     * class and path, so the decoded fields get paths like "payload.id". JSON objects become
-     * \stdClass objects, as in fromJson(). The value is read with string(), so
-     * UntrustedStrictValue requires a string. Null returns this object.
-     *
-     * @return static<mixed>
-     *
-     * @throws WrongTypeException When string() can't return a string, or the string is not valid JSON.
-     */
-    public function json(): static
-    {
-        if ($this->valueIsNull()) {
-            return $this;
-        }
-
-        return new static(self::decodeJson($this->string(false), $this->path), $this->path);
-    }
-
-    /**
-     * Whether int() with the same $nullable would return an int instead of throwing.
-     */
-    public function isInt(bool $nullable = true): bool
-    {
-        try {
-            $this->int($nullable);
-
-            return true;
-        } catch (WrongTypeException) {
-            return false;
-        }
-    }
-    /**
-     * Whether float() with the same $nullable would return a float instead of throwing.
-     */
-    public function isFloat(bool $nullable = true): bool
-    {
-        try {
-            $this->float($nullable);
-
-            return true;
-        } catch (WrongTypeException) {
-            return false;
-        }
-    }
-    /**
-     * Whether string() with the same $nullable would return a string instead of throwing.
-     */
-    public function isString(bool $nullable = true): bool
-    {
-        try {
-            $this->string($nullable);
-
-            return true;
-        } catch (WrongTypeException) {
-            return false;
-        }
-    }
-    /**
-     * Whether bool() with the same $nullable would return a bool instead of throwing.
-     */
-    public function isBool(bool $nullable = true): bool
-    {
-        try {
-            $this->bool($nullable);
-
-            return true;
-        } catch (WrongTypeException) {
-            return false;
-        }
-    }
-
-    /**
-     * Whether the value is null.
-     */
-    public function isNull(): bool
-    {
-        return $this->value === null;
-    }
-    /**
-     * Whether the value is an int, float, string or bool, or null when $nullable.
-     */
-    public function isScalar(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        return is_scalar($this->value);
-    }
-    /**
-     * Whether the value is iterable (see is_iterable()): an array or a Traversable object, or null
-     * when $nullable. A plain object like a \stdClass is not iterable, even though foreach over this
-     * object, or yieldList(), still reads its public properties.
-     */
-    public function isIterable(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        return is_iterable($this->value);
-    }
-
-    /**
-     * Whether the value is an object, or null when $nullable.
-     */
-    public function isObject(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        return is_object($this->value);
-    }
-    /**
-     * Whether the value is an array, list or not, or null when $nullable.
-     */
-    public function isArray(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        return is_array($this->value);
-    }
-    /**
-     * Whether the value is a list, an array with keys 0, 1, 2, … in order, or null when $nullable.
-     * An empty array is a list.
-     */
-    public function isList(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        if (!is_array($this->value)) {
-            return false;
-        }
-
-        return array_is_list($this->value);
-    }
-    /**
-     * Whether the value is a map: an array that is not a list. An empty array is a list, so it is
-     * not a map. Null passes when $nullable.
-     */
-    public function isMap(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        if (!is_array($this->value)) {
-            return false;
-        }
-
-        return !array_is_list($this->value);
-    }
-
-    /**
-     * This object, when the value is null.
-     *
-     * @return static<null&TValue>
-     *
-     * @throws WrongTypeException When the value is not null.
-     */
-    public function requireNull(): static
-    {
-        if ($this->valueIsNull()) {
-            return $this;
-        }
-
-        throw $this->wrongType('null');
-    }
-
-    /**
-     * This object, when isScalar() with the same $nullable is true.
-     *
-     * @return ($nullable is false ? static<scalar&TValue> : static<(scalar|null)&TValue>)
-     *
-     * @throws WrongTypeException When the value is not an int, float, string or bool, or is null when not allowed.
-     */
-    public function requireScalar(bool $nullable = true): static
-    {
-        if ($this->valueIsNull()) {
-            if (!$nullable) {
-                throw $this->wrongType('scalar');
-            }
-
-            return $this;
-        }
-
-        if ($this->valueIsScalar()) {
-            return $this;
-        }
-
-        throw $this->wrongType('scalar');
-    }
-
-    /**
-     * This object, when isArray() with the same $nullable is true.
-     *
-     * @return ($nullable is false ? static<array<mixed>&TValue> : static<(array<mixed>|null)&TValue>)
-     *
-     * @throws WrongTypeException When the value is not an array, or is null when not allowed.
-     */
-    public function requireArray(bool $nullable = true): static
-    {
-        if ($this->valueIsNull()) {
-            if (!$nullable) {
-                throw $this->wrongType('array');
-            }
-
-            return $this;
-        }
-
-        if ($this->valueIsArray()) {
-            return $this;
-        }
-
-        throw $this->wrongType('array');
-    }
-
-    /**
-     * This object, when isObject() with the same $nullable is true.
-     *
-     * @return ($nullable is false ? static<object&TValue> : static<(object|null)&TValue>)
-     *
-     * @throws WrongTypeException When the value is not an object, or is null when not allowed.
-     */
-    public function requireObject(bool $nullable = true): static
-    {
-        if ($this->valueIsNull()) {
-            if (!$nullable) {
-                throw $this->wrongType('object');
-            }
-
-            return $this;
-        }
-
-        if ($this->valueIsObject()) {
-            return $this;
-        }
-
-        throw $this->wrongType('object');
-    }
-
-    /**
-     * This object, when isList() with the same $nullable is true.
-     *
-     * @return ($nullable is false ? static<list<mixed>&TValue> : static<(list<mixed>|null)&TValue>)
-     *
-     * @throws WrongTypeException When the value is not a list, or is null when not allowed.
-     */
-    public function requireList(bool $nullable = true): static
-    {
-        if ($this->valueIsNull()) {
-            if (!$nullable) {
-                throw $this->wrongType('list');
-            }
-
-            return $this;
-        }
-
-        if ($this->valueIsList()) {
-            return $this;
-        }
-
-        throw $this->wrongType('list', is_array($this->value) ? 'map' : null);
-    }
-
-    /**
-     * This object, when isMap() with the same $nullable is true. PHPStan has no type for an array
-     * that is not a list, so TValue is only narrowed to its array part.
-     *
-     * @return ($nullable is false ? static<array<mixed>&TValue> : static<(array<mixed>|null)&TValue>)
-     *
-     * @throws WrongTypeException When the value is not a map, or is null when not allowed.
-     */
-    public function requireMap(bool $nullable = true): static
-    {
-        if ($this->valueIsNull()) {
-            if (!$nullable) {
-                throw $this->wrongType('map');
-            }
-
-            return $this;
-        }
-
-        if ($this->valueIsList()) {
-            throw $this->wrongType('map', 'list');
-        }
-
-        if ($this->valueIsArray()) {
-            return $this;
-        }
-
-        throw $this->wrongType('map');
-    }
-
-    /**
-     * Whether the value can have named properties: an object, or an array that is not a list.
-     * An empty array is a list, so it does not count. Null passes when $nullable.
-     */
-    public function hasProperties(bool $nullable = true): bool
-    {
-        if ($this->value === null) {
-            return $nullable;
-        }
-
-        if (is_object($this->value)) {
-            return true;
-        }
-
-        if (!is_array($this->value)) {
-            return false;
-        }
-
-        return !array_is_list($this->value);
-    }
     /**
      * Serializes to the raw value, unchanged. A filter() or map() result holds a generator, which
      * json_encode() turns into {}; collect it with list() first.
@@ -1631,100 +1641,6 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     public function jsonSerialize(): mixed
     {
         return $this->value;
-    }
-    /**
-     * $mapper's result for each item, with its key, wrapped as mapItem() does.
-     *
-     * @template TKey
-     * @template TResult
-     *
-     * @param \Generator<TKey, static<mixed>, mixed, void> $items
-     * @param callable(static<mixed>, TKey): TResult $mapper
-     *
-     * @return \Generator<TKey, (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>), mixed, void>
-     */
-    private function mapItems(\Generator $items, callable $mapper): \Generator
-    {
-        foreach ($items as $key => $item) {
-            yield $key => $this->mapItem($item, $key, $mapper);
-        }
-    }
-
-    /**
-     * The items $callback returns true for, with their keys.
-     *
-     * @param \Generator<mixed, static<mixed>, mixed, void> $items
-     * @param callable(static<mixed>, mixed): bool $callback
-     *
-     * @return \Generator<mixed, static<mixed>, mixed, void>
-     */
-    private function filterItems(\Generator $items, callable $callback): \Generator
-    {
-        foreach ($items as $key => $item) {
-            if ($callback($item, $key)) {
-                yield $key => $item;
-            }
-        }
-    }
-
-    /**
-     * $mapper's result for each item, with its key, as it is.
-     *
-     * @template TKey
-     * @template TResult
-     *
-     * @param \Generator<TKey, static<mixed>, mixed, void> $items
-     * @param callable(static<mixed>, TKey): TResult $mapper
-     *
-     * @return \Generator<TKey, TResult, mixed, void>
-     */
-    private function mapRawItems(\Generator $items, callable $mapper): \Generator
-    {
-        foreach ($items as $key => $item) {
-            yield $key => $mapper($item, $key);
-        }
-    }
-
-    /**
-     * The items of $mapper's result for each item, one by one (yield from).
-     *
-     * @template TKey
-     * @template TResult
-     *
-     * @param \Generator<mixed, static<mixed>, mixed, void> $items
-     * @param callable(static<mixed>, mixed): iterable<TKey, TResult> $mapper
-     *
-     * @return \Generator<TKey, TResult, mixed, void>
-     */
-    private function flatMapItems(\Generator $items, callable $mapper): \Generator
-    {
-        foreach ($items as $key => $item) {
-            yield from $mapper($item, $key);
-        }
-    }
-
-    /**
-     * $mapper's result for the item, wrapped in this class with the item's path unless it already
-     * is an AbstractUntrustedValue.
-     *
-     * @template TKey
-     * @template TResult
-     *
-     * @param static<mixed> $item
-     * @param TKey $key
-     * @param callable(static<mixed>, TKey): TResult $mapper
-     *
-     * @return (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>)
-     */
-    private function mapItem(self $item, mixed $key, callable $mapper): self
-    {
-        $result = $mapper($item, $key);
-
-        if ($result instanceof AbstractUntrustedValue) {
-            return $result;
-        }
-
-        return new static($result, $item->path);
     }
 
     /**
@@ -1783,6 +1699,102 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
             yield $key => new static($item, $this->childPath($name));
         }
     }
+
+    /**
+     * The items $callback returns true for, with their keys.
+     *
+     * @param \Generator<mixed, static<mixed>, mixed, void> $items
+     * @param callable(static<mixed>, mixed): bool $callback
+     *
+     * @return \Generator<mixed, static<mixed>, mixed, void>
+     */
+    private function filterItems(\Generator $items, callable $callback): \Generator
+    {
+        foreach ($items as $key => $item) {
+            if ($callback($item, $key)) {
+                yield $key => $item;
+            }
+        }
+    }
+
+    /**
+     * $mapper's result for each item, with its key, wrapped as mapItem() does.
+     *
+     * @template TKey
+     * @template TResult
+     *
+     * @param \Generator<TKey, static<mixed>, mixed, void> $items
+     * @param callable(static<mixed>, TKey): TResult $mapper
+     *
+     * @return \Generator<TKey, (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>), mixed, void>
+     */
+    private function mapItems(\Generator $items, callable $mapper): \Generator
+    {
+        foreach ($items as $key => $item) {
+            yield $key => $this->mapItem($item, $key, $mapper);
+        }
+    }
+
+    /**
+     * $mapper's result for the item, wrapped in this class with the item's path unless it already
+     * is an AbstractUntrustedValue.
+     *
+     * @template TKey
+     * @template TResult
+     *
+     * @param static<mixed> $item
+     * @param TKey $key
+     * @param callable(static<mixed>, TKey): TResult $mapper
+     *
+     * @return (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>)
+     */
+    private function mapItem(self $item, mixed $key, callable $mapper): self
+    {
+        $result = $mapper($item, $key);
+
+        if ($result instanceof AbstractUntrustedValue) {
+            return $result;
+        }
+
+        return new static($result, $item->path);
+    }
+
+    /**
+     * $mapper's result for each item, with its key, as it is.
+     *
+     * @template TKey
+     * @template TResult
+     *
+     * @param \Generator<TKey, static<mixed>, mixed, void> $items
+     * @param callable(static<mixed>, TKey): TResult $mapper
+     *
+     * @return \Generator<TKey, TResult, mixed, void>
+     */
+    private function mapRawItems(\Generator $items, callable $mapper): \Generator
+    {
+        foreach ($items as $key => $item) {
+            yield $key => $mapper($item, $key);
+        }
+    }
+
+    /**
+     * The items of $mapper's result for each item, one by one (yield from).
+     *
+     * @template TKey
+     * @template TResult
+     *
+     * @param \Generator<mixed, static<mixed>, mixed, void> $items
+     * @param callable(static<mixed>, mixed): iterable<TKey, TResult> $mapper
+     *
+     * @return \Generator<TKey, TResult, mixed, void>
+     */
+    private function flatMapItems(\Generator $items, callable $mapper): \Generator
+    {
+        foreach ($items as $key => $item) {
+            yield from $mapper($item, $key);
+        }
+    }
+
     /**
      * The items of $traversable with their keys. A later item with the same key replaces an earlier
      * one. Unlike iterator_to_array(), a key that is not an int or string throws a
@@ -1857,16 +1869,6 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * An InvalidTypeException with filter "required" for the missing property $name, at its path.
-     */
-    private function missingProperty(string $name): InvalidTypeException
-    {
-        $path = $this->childPath($name);
-
-        return new InvalidTypeException(sprintf('Missing required property %s', $path), 'required', $path);
-    }
-
-    /**
      * Whether $subject matches $regexp. An invalid pattern is the caller's mistake, so it
      * throws an \InvalidArgumentException. Other PCRE errors, like an exhausted backtrack limit or
      * invalid UTF-8 with the u modifier, come from the value, so they throw an InvalidTypeException
@@ -1892,6 +1894,26 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * A WrongTypeException for this value and path, expecting $expectedType.
+     *
+     * The given type defaults to get_debug_type() of the value. Pass one when there is a more
+     * precise description, e.g. "non-numeric-string".
+     */
+    protected function wrongType(string $expectedType, ?string $givenType = null): WrongTypeException
+    {
+        $givenType ??= get_debug_type($this->value);
+
+        return new WrongTypeException(
+            $this->path === ''
+                ? sprintf('Expected %s, got %s', $expectedType, $givenType)
+                : sprintf('Expected %s at %s, got %s', $expectedType, $this->path, $givenType),
+            $expectedType,
+            $givenType,
+            $this->path,
+        );
+    }
+
+    /**
      * An InvalidTypeException for a filter the value failed, with a message like
      * "Expected at least 0 at user.age".
      */
@@ -1907,51 +1929,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Whether the value is identical to one of $allowed. When it is, PHPStan narrows this object's
-     * TValue to match.
-     *
-     * @template TAllowed
-     *
-     * @param array<array-key, TAllowed> $allowed
-     *
-     * @phpstan-assert-if-true static<TAllowed&TValue> $this
+     * An InvalidTypeException with filter "required" for the missing property $name, at its path.
      */
-    private function valueIsOneOf(array $allowed): bool
+    private function missingProperty(string $name): InvalidTypeException
     {
-        return in_array($this->value, $allowed, true);
-    }
+        $path = $this->childPath($name);
 
-    /**
-     * Whether the value is a string. PHPStan narrows this object's TValue to match either way.
-     *
-     * @phpstan-assert-if-true static<string&TValue> $this
-     * @phpstan-assert-if-true string $this->value
-     * @phpstan-assert-if-false static<(int|float|bool|array|object|resource|null)&TValue> $this
-     */
-    private function valueIsString(): bool
-    {
-        return is_string($this->value);
-    }
-
-    /**
-     * Whether the value is not null. When it is not, PHPStan narrows this object's TValue to match.
-     *
-     * @phpstan-assert-if-true static<(int|float|string|bool|array<mixed>|object|resource)&TValue> $this
-     */
-    private function valueIsNotNull(): bool
-    {
-        return $this->value !== null;
-    }
-
-    /**
-     * Always true. PHPStan only lets $this widen to a static<TValue|TOther> return type after an
-     * assertion has typed it as static<TValue>, so replace() checks this before returning $this.
-     *
-     * @phpstan-assert-if-true static<TValue> $this
-     */
-    private function keepsTValue(): bool
-    {
-        return true;
+        return new InvalidTypeException(sprintf('Missing required property %s', $path), 'required', $path);
     }
 
     /**
@@ -1965,6 +1949,16 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * Whether the value is not null. When it is not, PHPStan narrows this object's TValue to match.
+     *
+     * @phpstan-assert-if-true static<(int|float|string|bool|array<mixed>|object|resource)&TValue> $this
+     */
+    private function valueIsNotNull(): bool
+    {
+        return $this->value !== null;
+    }
+
+    /**
      * Whether the value is an int, float, string or bool. When it is, PHPStan narrows this
      * object's TValue to match.
      *
@@ -1973,6 +1967,18 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     private function valueIsScalar(): bool
     {
         return is_scalar($this->value);
+    }
+
+    /**
+     * Whether the value is a string. PHPStan narrows this object's TValue to match either way.
+     *
+     * @phpstan-assert-if-true static<string&TValue> $this
+     * @phpstan-assert-if-true string $this->value
+     * @phpstan-assert-if-false static<(int|float|bool|array|object|resource|null)&TValue> $this
+     */
+    private function valueIsString(): bool
+    {
+        return is_string($this->value);
     }
 
     /**
@@ -2006,22 +2012,28 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * A WrongTypeException for this value and path, expecting $expectedType.
+     * Whether the value is identical to one of $allowed. When it is, PHPStan narrows this object's
+     * TValue to match.
      *
-     * The given type defaults to get_debug_type() of the value. Pass one when there is a more
-     * precise description, e.g. "non-numeric-string".
+     * @template TAllowed
+     *
+     * @param array<array-key, TAllowed> $allowed
+     *
+     * @phpstan-assert-if-true static<TAllowed&TValue> $this
      */
-    protected function wrongType(string $expectedType, ?string $givenType = null): WrongTypeException
+    private function valueIsOneOf(array $allowed): bool
     {
-        $givenType ??= get_debug_type($this->value);
+        return in_array($this->value, $allowed, true);
+    }
 
-        return new WrongTypeException(
-            $this->path === ''
-                ? sprintf('Expected %s, got %s', $expectedType, $givenType)
-                : sprintf('Expected %s at %s, got %s', $expectedType, $this->path, $givenType),
-            $expectedType,
-            $givenType,
-            $this->path,
-        );
+    /**
+     * Always true. PHPStan only lets $this widen to a static<TValue|TOther> return type after an
+     * assertion has typed it as static<TValue>, so replace() checks this before returning $this.
+     *
+     * @phpstan-assert-if-true static<TValue> $this
+     */
+    private function keepsTValue(): bool
+    {
+        return true;
     }
 }
