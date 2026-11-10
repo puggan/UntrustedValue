@@ -182,7 +182,7 @@ passes.
 
 ```php
 $ids = $query->property('ids', false)->split(',')->listInt(false);   // "3,5,8" → [3, 5, 8]
-$note = $data->property('note')->trim()->blankDefault()->string();    // "   " → null
+$note = $data->property('note')->trim()->blankDefault()->string();   // "   " → null
 ```
 
 ## Read nested values

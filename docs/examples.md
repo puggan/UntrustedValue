@@ -38,12 +38,12 @@ enum Sort: string { case Name = 'name'; case Date = 'date'; }
 
 $query = new UntrustedValue($_GET);   // ['page' => '2', 'ids' => '3,5,8', 'sort' => 'date', 'active' => 'on', 'since' => '2026-11-01']
 
-$page   = $query->property('page', false)->default(1)->asInt(false)->range(min: 1)->int();   // 2
-$limit  = $query->property('limit', false)->default(20)->asInt(false)->range(1, 100)->int(); // 20, missing
-$ids    = $query->property('ids', false)->split(',')->listInt(false);                       // [3, 5, 8]
-$sort   = $query->property('sort', false)->default('name')->enum(Sort::class, false);       // Sort::Date
-$active = $query->property('active', false)->default(false)->bool(false);                   // true
-$since  = $query->property('since', false)->date('!Y-m-d');                                 // 2026-11-01 00:00, or null
+$page   = $query->property('page', false)->default(1)->asInt(false)->range(min: 1)->int();     // 2
+$limit  = $query->property('limit', false)->default(20)->asInt(false)->range(1, 100)->int();   // 20, missing
+$ids    = $query->property('ids', false)->split(',')->listInt(false);                          // [3, 5, 8]
+$sort   = $query->property('sort', false)->default('name')->enum(Sort::class, false);          // Sort::Date
+$active = $query->property('active', false)->default(false)->bool(false);                      // true
+$since  = $query->property('since', false)->date('!Y-m-d');                                    // 2026-11-01 00:00, or null
 ```
 
 `?page=0` fails with:
@@ -61,10 +61,10 @@ type: `"7"` is not an id. `float()` still accepts an int, as JSON has no separat
 ```php
 $body = UntrustedStrictValue::fromJson('{"id": 7, "price": 19, "tags": ["a", "b"], "note": null}');
 
-$body->property('id')->int(false);           // 7
-$body->property('price')->float(false);      // 19.0
-$body->property('tags')->listString(false);  // ['a', 'b']
-$body->property('note')->string();           // null
+$body->property('id')->int(false);            // 7
+$body->property('price')->float(false);       // 19.0
+$body->property('tags')->listString(false);   // ['a', 'b']
+$body->property('note')->string();            // null
 ```
 
 `{"id": "7"}` fails with:
@@ -107,10 +107,10 @@ $users = UntrustedValue::fromJson('[
 ]');
 
 $adultNames = $users
-    ->filterValid(fn(UntrustedValue $user) => $user->property('age')->asInt(false))  // drops Cy
-    ->filter(fn(UntrustedValue $user) => $user->property('age')->int(false) >= 18)  // drops Bo
+    ->filterValid(fn(UntrustedValue $user) => $user->property('age')->asInt(false))   // drops Cy
+    ->filter(fn(UntrustedValue $user) => $user->property('age')->int(false) >= 18)    // drops Bo
     ->map(fn(UntrustedValue $user) => $user->property('name'))
-    ->listString(false);                                                            // ['Ada', 'Di']
+    ->listString(false);                                                              // ['Ada', 'Di']
 ```
 
 Without the `filterValid()`, Cy's age fails at its own path:
@@ -166,7 +166,7 @@ new UntrustedValue('42,"Smith, Ann","say ""hi"""')->csv()->listString(false);
 
 ```php
 new UntrustedValue('desc')->oneOf(['asc', 'desc'])->string(false);   // 'desc'
-new UntrustedValue('   ')->trim()->blankDefault()->string();          // null
+new UntrustedValue('   ')->trim()->blankDefault()->string();         // null
 ```
 
 Each of these fails, with the error shown below it:

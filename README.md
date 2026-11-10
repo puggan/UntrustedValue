@@ -89,8 +89,8 @@ Query strings and forms only send strings, so the loose `UntrustedValue` convert
 $query = new UntrustedValue($_GET);   // ?page=2&ids=3,5,8&active=on
 
 $page = $query->property('page', false)->default(1)->asInt(false)->range(min: 1)->int();   // 2
-$ids = $query->property('ids', false)->split(',')->listInt(false);                       // [3, 5, 8]
-$active = $query->property('active', false)->default(false)->bool(false);                // true
+$ids = $query->property('ids', false)->split(',')->listInt(false);                         // [3, 5, 8]
+$active = $query->property('active', false)->default(false)->bool(false);                  // true
 ```
 
 Lists can be filtered and mapped in a chain, and every item keeps its path, so errors still point
