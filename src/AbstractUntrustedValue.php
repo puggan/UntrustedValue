@@ -125,6 +125,39 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     abstract public function asInt(bool $nullable = true): UntrustedStrictValue;
 
     /**
+     * The value converted by float(), wrapped as an UntrustedStrictValue with the same path, so it
+     * can be checked further while it is known to be a float. The wrapped type follows float()'s
+     * return type, which is the same in both classes.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? UntrustedStrictValue<(TValue is float ? TValue : float)>
+     *     : UntrustedStrictValue<(TValue is float|null ? TValue : (TValue is scalar|array|object|resource ? float : float|null))>
+     * )
+     *
+     * @throws WrongTypeException When float() throws.
+     */
+    public function asFloat(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->float(nullable: $nullable), $this->path);
+    }
+
+    /**
+     * The value converted by string(), wrapped as an UntrustedStrictValue with the same path, so it
+     * can be checked further while it is known to be a string. The wrapped type follows string()'s
+     * return type, which UntrustedStrictValue narrows further.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? UntrustedStrictValue<(TValue is string ? TValue : string)>
+     *     : UntrustedStrictValue<(TValue is string|null ? TValue : (TValue is scalar|array|object|resource ? string : string|null))>
+     * )
+     *
+     * @throws WrongTypeException When string() throws.
+     */
+    abstract public function asString(bool $nullable = true): UntrustedStrictValue;
+
+    /**
      * Returns the raw value, unchanged and unchecked.
      *
      * @return TValue

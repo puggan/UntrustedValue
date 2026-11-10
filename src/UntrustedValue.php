@@ -47,6 +47,22 @@ final class UntrustedValue extends AbstractUntrustedValue
     }
 
     /**
+     * The value converted by string(), wrapped as an UntrustedStrictValue with the same path.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? UntrustedStrictValue<(TValue is string ? TValue : string)>
+     *     : UntrustedStrictValue<(TValue is string|null ? TValue : (TValue is scalar|array|object|resource ? string : string|null))>
+     * )
+     *
+     * @throws WrongTypeException When string() throws.
+     */
+    public function asString(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->string(nullable: $nullable), $this->path);
+    }
+
+    /**
      * Returns the value as an int.
      *
      * Besides an int, these are converted too:
