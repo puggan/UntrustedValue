@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedValue;
 
@@ -25,17 +24,21 @@ final class UntrustedValueIsScalarTest extends TestCase
         yield 'object' => [new \stdClass(), false];
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testIsScalar(mixed $value, bool $expected): void
     {
-        self::assertSame($expected, new UntrustedValue($value)->isScalar());
-        self::assertSame($expected, new UntrustedValue($value)->isScalar(nullable: false));
+        self::assertSame($expected, (new UntrustedValue($value))->isScalar());
+        self::assertSame($expected, (new UntrustedValue($value))->isScalar(nullable: false));
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testIsNotNull(mixed $value, bool $isScalar): void
     {
-        self::assertFalse(new UntrustedValue($value)->isNull());
+        self::assertFalse((new UntrustedValue($value))->isNull());
     }
 
     public function testNull(): void

@@ -29,7 +29,7 @@ final class FilterTest extends TestCase
 
     public function testKeepsMatchingItemsWithTheirKeysAndPaths(): void
     {
-        $filtered = new UntrustedValue(['a' => 1, 'b' => 2, 'c' => 3], 'n')->filter(
+        $filtered = (new UntrustedValue(['a' => 1, 'b' => 2, 'c' => 3], 'n'))->filter(
             static fn(UntrustedValue $item): bool => $item->int(false) % 2 === 1,
         );
 
@@ -39,7 +39,7 @@ final class FilterTest extends TestCase
 
     public function testHoldsAGeneratorOfTheWrappedItems(): void
     {
-        $filtered = new UntrustedValue(['a' => 1, 'b' => 2], 'n')->filter(static fn(UntrustedValue $item): bool => true);
+        $filtered = (new UntrustedValue(['a' => 1, 'b' => 2], 'n'))->filter(static fn(UntrustedValue $item): bool => true);
 
         self::assertSame(['n.a', 'n.b'], array_values(array_map(
             static fn(UntrustedValue $item): string => $item->path,
@@ -59,11 +59,11 @@ final class FilterTest extends TestCase
 
     public function testPathsKeepTheOriginalKeysEvenWhenRenumbered(): void
     {
-        $filtered = new UntrustedValue([10, 11, 12, 13], 'n')->filter(static fn(UntrustedValue $item): bool => $item->int(false) > 11);
+        $filtered = (new UntrustedValue([10, 11, 12, 13], 'n'))->filter(static fn(UntrustedValue $item): bool => $item->int(false) > 11);
         self::assertSame([[2, 12, 'n.2'], [3, 13, 'n.3']], self::collect($filtered));
 
         $paths = [];
-        foreach (new UntrustedValue([10, 11, 12, 13], 'n')->filter(static fn(UntrustedValue $item): bool => $item->int(false) > 11)->yieldList() as $index => $item) {
+        foreach ((new UntrustedValue([10, 11, 12, 13], 'n'))->filter(static fn(UntrustedValue $item): bool => $item->int(false) > 11)->yieldList() as $index => $item) {
             $paths[$index] = $item->path;
         }
         self::assertSame(['n.2', 'n.3'], $paths);
@@ -80,7 +80,7 @@ final class FilterTest extends TestCase
 
     public function testKeepsTheClass(): void
     {
-        $filtered = new UntrustedStrictValue(['1', '2'])->filter(static fn(UntrustedStrictValue $item): bool => true);
+        $filtered = (new UntrustedStrictValue(['1', '2']))->filter(static fn(UntrustedStrictValue $item): bool => true);
 
         self::assertSame(UntrustedStrictValue::class, $filtered::class);
 
@@ -91,7 +91,7 @@ final class FilterTest extends TestCase
     public function testRunsLazilyButChecksTheValueWhenCalled(): void
     {
         $calls = 0;
-        $filtered = new UntrustedValue([1, 2])->filter(static function () use (&$calls): bool {
+        $filtered = (new UntrustedValue([1, 2]))->filter(static function () use (&$calls): bool {
             $calls++;
 
             return true;
@@ -101,7 +101,7 @@ final class FilterTest extends TestCase
         self::assertSame(2, $calls);
 
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue('abc')->filter(static fn(): bool => true);
+        (new UntrustedValue('abc'))->filter(static fn(): bool => true);
     }
 
     public function testNullGivesNoItems(): void

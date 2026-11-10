@@ -28,8 +28,8 @@ function templateType(UntrustedValue $shaped, UntrustedStrictValue $strictShaped
     assertType('mixed', UntrustedValue::fromJson($json)->raw());
     assertType('Puggan\UntrustedValue\UntrustedValue<42>', new UntrustedValue(42));
     assertType('Puggan\UntrustedValue\UntrustedStrictValue<42>', new UntrustedStrictValue(42));
-    assertType('42', new UntrustedValue(42)->raw());
+    assertType('42', (new UntrustedValue(42))->raw());
     assertType('Puggan\UntrustedValue\UntrustedValue<array{id: int}>', new UntrustedValue($shaped));
     assertType('Puggan\UntrustedValue\UntrustedStrictValue<array{id: int}>', new UntrustedStrictValue($shaped, 'x'));
-    assertType("'text'", new UntrustedStrictValue('text')->raw());
+    assertType("'text'", (new UntrustedStrictValue('text'))->raw());
 }

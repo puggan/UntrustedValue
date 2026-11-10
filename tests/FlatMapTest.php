@@ -24,7 +24,7 @@ final class FlatMapTest extends TestCase
 
     public function testFlattensPlainIterablesAsTheyAre(): void
     {
-        $flat = new UntrustedValue([1, 2, 3])->yieldFlatMap(
+        $flat = (new UntrustedValue([1, 2, 3]))->yieldFlatMap(
             static fn(UntrustedValue $item): array => array_fill(0, $item->int(false), $item->int(false)),
         );
 
@@ -33,7 +33,7 @@ final class FlatMapTest extends TestCase
 
     public function testKeysComeFromEachResult(): void
     {
-        $flat = new UntrustedValue(['x', 'y'])->yieldFlatMap(
+        $flat = (new UntrustedValue(['x', 'y']))->yieldFlatMap(
             static fn(UntrustedValue $item, mixed $key): \Generator => yield $item->string(false) => $key,
         );
 
@@ -43,7 +43,7 @@ final class FlatMapTest extends TestCase
     public function testRunsLazilyButChecksTheValueWhenCalled(): void
     {
         $calls = 0;
-        $flat = new UntrustedValue([1, 2])->yieldFlatMap(static function () use (&$calls): array {
+        $flat = (new UntrustedValue([1, 2]))->yieldFlatMap(static function () use (&$calls): array {
             $calls++;
 
             return [];
@@ -53,7 +53,7 @@ final class FlatMapTest extends TestCase
         self::assertSame(2, $calls);
 
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue('abc')->yieldFlatMap(static fn(): array => []);
+        (new UntrustedValue('abc'))->yieldFlatMap(static fn(): array => []);
     }
 
     public function testNullGivesNothingUnlessNotNullable(): void

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
@@ -52,31 +51,39 @@ final class UntrustedValueStringTest extends TestCase
         yield 'float -inf' => [-INF, 'non-finite-float'];
     }
 
-    #[DataProvider('strings')]
+    /**
+     * @dataProvider strings
+     */
     public function testReturnsStrings(string $value): void
     {
-        self::assertSame($value, new UntrustedValue($value)->string());
-        self::assertSame($value, new UntrustedStrictValue($value)->string());
+        self::assertSame($value, (new UntrustedValue($value))->string());
+        self::assertSame($value, (new UntrustedStrictValue($value))->string());
     }
 
-    #[DataProvider('convertible')]
+    /**
+     * @dataProvider convertible
+     */
     public function testConvertsWhenNotStrict(int|float $value, string $expected): void
     {
-        self::assertSame($expected, new UntrustedValue($value)->string());
+        self::assertSame($expected, (new UntrustedValue($value))->string());
     }
 
-    #[DataProvider('convertible')]
+    /**
+     * @dataProvider convertible
+     */
     public function testRejectsConversionWhenStrict(int|float $value, string $nonStrictResult): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue($value)->string();
+        (new UntrustedStrictValue($value))->string();
     }
 
-    #[DataProvider('notConvertible')]
+    /**
+     * @dataProvider notConvertible
+     */
     public function testRejectsOtherValues(mixed $value, string $givenType): void
     {
         try {
-            new UntrustedValue($value, 'user.name')->string();
+            (new UntrustedValue($value, 'user.name'))->string();
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('string', $exception->expectedType);
@@ -95,7 +102,7 @@ final class UntrustedValueStringTest extends TestCase
     public function testNullIsRejectedWhenNotNullable(): void
     {
         try {
-            new UntrustedValue(null)->string(nullable: false);
+            (new UntrustedValue(null))->string(nullable: false);
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('null', $exception->givenType);

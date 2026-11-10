@@ -34,7 +34,7 @@ final class WrongTypeExceptionTest extends TestCase
     {
         $previous = new \LogicException('inner');
 
-        self::assertSame($previous, new WrongTypeException('', '', '', '', $previous)->getPrevious());
+        self::assertSame($previous, (new WrongTypeException('', '', '', '', $previous))->getPrevious());
     }
 
     public function testSerializesToJson(): void

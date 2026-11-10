@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
@@ -45,39 +44,45 @@ final class UntrustedValueBoolTest extends TestCase
     public function testReturnsBools(): void
     {
         foreach ([true, false] as $bool) {
-            self::assertSame($bool, new UntrustedValue($bool)->bool());
-            self::assertSame($bool, new UntrustedStrictValue($bool)->bool());
+            self::assertSame($bool, (new UntrustedValue($bool))->bool());
+            self::assertSame($bool, (new UntrustedStrictValue($bool))->bool());
         }
     }
 
-    #[DataProvider('convertible')]
+    /**
+     * @dataProvider convertible
+     */
     public function testLooseConverts(mixed $value, bool $expected): void
     {
-        self::assertSame($expected, new UntrustedValue($value)->bool());
-        self::assertTrue(new UntrustedValue($value)->isBool());
+        self::assertSame($expected, (new UntrustedValue($value))->bool());
+        self::assertTrue((new UntrustedValue($value))->isBool());
     }
 
-    #[DataProvider('convertible')]
+    /**
+     * @dataProvider convertible
+     */
     public function testStrictRejectsConversions(mixed $value, bool $looseResult): void
     {
-        self::assertFalse(new UntrustedStrictValue($value)->isBool());
+        self::assertFalse((new UntrustedStrictValue($value))->isBool());
 
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue($value)->bool();
+        (new UntrustedStrictValue($value))->bool();
     }
 
-    #[DataProvider('notConvertible')]
+    /**
+     * @dataProvider notConvertible
+     */
     public function testRejectsOtherValues(mixed $value, string $givenType): void
     {
         try {
-            new UntrustedValue($value, 'agree')->bool();
+            (new UntrustedValue($value, 'agree'))->bool();
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('bool', $exception->expectedType);
             self::assertSame($givenType, $exception->givenType);
             self::assertSame("Expected bool at agree, got {$givenType}", $exception->getMessage());
         }
-        self::assertFalse(new UntrustedValue($value)->isBool());
+        self::assertFalse((new UntrustedValue($value))->isBool());
     }
 
     public function testNull(): void
@@ -95,13 +100,13 @@ final class UntrustedValueBoolTest extends TestCase
 
     public function testAsBoolWrapsTheConvertedBool(): void
     {
-        $agree = new UntrustedValue('yes', 'agree')->asBool(false);
+        $agree = (new UntrustedValue('yes', 'agree'))->asBool(false);
 
         self::assertTrue($agree->value);
         self::assertSame('agree', $agree->path);
         self::assertSame(UntrustedStrictValue::class, $agree::class);
 
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue('yes')->asBool();
+        (new UntrustedStrictValue('yes'))->asBool();
     }
 }

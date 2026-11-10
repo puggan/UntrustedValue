@@ -27,7 +27,7 @@ final class AsStrictAsLooseTest extends TestCase
     public function testLooseAsStrictCopiesValueAndPath(): void
     {
         $value = new \stdClass();
-        $strict = new UntrustedValue($value, 'user')->asStrict();
+        $strict = (new UntrustedValue($value, 'user'))->asStrict();
 
         self::assertSame($value, $strict->value);
         self::assertSame('user', $strict->path);
@@ -36,7 +36,7 @@ final class AsStrictAsLooseTest extends TestCase
     public function testStrictAsLooseCopiesValueAndPath(): void
     {
         $value = new \stdClass();
-        $loose = new UntrustedStrictValue($value, 'user')->asLoose();
+        $loose = (new UntrustedStrictValue($value, 'user'))->asLoose();
 
         self::assertSame($value, $loose->value);
         self::assertSame('user', $loose->path);

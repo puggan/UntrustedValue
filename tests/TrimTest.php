@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
@@ -23,7 +22,9 @@ final class TrimTest extends TestCase
         yield 'null byte' => ["abc\0", 'abc'];
     }
 
-    #[DataProvider('untrimmed')]
+    /**
+     * @dataProvider untrimmed
+     */
     public function testTrimsIntoANewObject(string $value, string $expected): void
     {
         $untrusted = new UntrustedStrictValue($value, 'user.name');
@@ -49,7 +50,9 @@ final class TrimTest extends TestCase
         yield 'object' => [new \stdClass()];
     }
 
-    #[DataProvider('unchanged')]
+    /**
+     * @dataProvider unchanged
+     */
     public function testReturnsThisWhenThereIsNothingToTrim(mixed $value): void
     {
         $untrusted = new UntrustedValue($value);

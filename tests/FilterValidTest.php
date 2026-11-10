@@ -22,7 +22,7 @@ final class FilterValidTest extends TestCase
 
     public function testKeepsTheOriginalItemNotTheValidatorResult(): void
     {
-        $kept = new UntrustedValue(['5', 'x'], 'n')->filterValid(static fn(UntrustedValue $item): UntrustedStrictValue => $item->asInt(false));
+        $kept = (new UntrustedValue(['5', 'x'], 'n'))->filterValid(static fn(UntrustedValue $item): UntrustedStrictValue => $item->asInt(false));
 
         $items = $kept->list();
         self::assertCount(1, $items);
@@ -33,7 +33,7 @@ final class FilterValidTest extends TestCase
     public function testValidatorGetsTheKey(): void
     {
         $seen = [];
-        new UntrustedValue(['a' => 1, 'b' => 2])->filterValid(static function (UntrustedValue $item, mixed $key) use (&$seen): void {
+        (new UntrustedValue(['a' => 1, 'b' => 2]))->filterValid(static function (UntrustedValue $item, mixed $key) use (&$seen): void {
             $seen[] = $key;
         })->list();
 
@@ -43,14 +43,14 @@ final class FilterValidTest extends TestCase
     public function testOtherExceptionsComeThrough(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        new UntrustedValue(['a'])->filterValid(static fn(UntrustedValue $item): UntrustedValue => $item->match('/broken'))->list();
+        (new UntrustedValue(['a']))->filterValid(static fn(UntrustedValue $item): UntrustedValue => $item->match('/broken'))->list();
     }
 
     public function testChains(): void
     {
         self::assertSame(
             [2, 3],
-            new UntrustedValue(['1', 'x', '2', '3', 'y'])
+            (new UntrustedValue(['1', 'x', '2', '3', 'y']))
                 ->filterValid(static fn(UntrustedValue $item): ?int => $item->int())
                 ->filter(static fn(UntrustedValue $item): bool => $item->int(false) > 1)
                 ->listInt(false),
@@ -59,6 +59,6 @@ final class FilterValidTest extends TestCase
 
     public function testKeepsTheClass(): void
     {
-        self::assertSame(UntrustedStrictValue::class, new UntrustedStrictValue([1])->filterValid(static fn(): mixed => null)::class);
+        self::assertSame(UntrustedStrictValue::class, (new UntrustedStrictValue([1]))->filterValid(static fn(): mixed => null)::class);
     }
 }

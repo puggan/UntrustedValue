@@ -13,7 +13,7 @@ final class AsStringTest extends TestCase
 {
     public function testWrapsTheConvertedString(): void
     {
-        $string = new UntrustedValue(42, 'user.name')->asString();
+        $string = (new UntrustedValue(42, 'user.name'))->asString();
 
         self::assertSame('42', $string->value);
         self::assertSame('user.name', $string->path);
@@ -21,10 +21,10 @@ final class AsStringTest extends TestCase
 
     public function testStrictValueOnlyWrapsStrings(): void
     {
-        self::assertSame('abc', new UntrustedStrictValue('abc')->asString()->value);
+        self::assertSame('abc', (new UntrustedStrictValue('abc'))->asString()->value);
 
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue(42)->asString();
+        (new UntrustedStrictValue(42))->asString();
     }
 
     public function testWrapsNullWhenNullable(): void

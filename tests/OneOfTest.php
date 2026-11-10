@@ -21,7 +21,7 @@ final class OneOfTest extends TestCase
     public function testComparesStrictly(): void
     {
         try {
-            new UntrustedValue(self::untyped('1'), 'page.size')->oneOf([1, 2]);
+            (new UntrustedValue(self::untyped('1'), 'page.size'))->oneOf([1, 2]);
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('oneOf', $exception->filter);
@@ -29,13 +29,13 @@ final class OneOfTest extends TestCase
             self::assertSame('Expected one of 1, 2 at page.size', $exception->getMessage());
         }
 
-        self::assertSame(2, new UntrustedValue('2')->asInt(false)->oneOf([1, 2])->int(false));
+        self::assertSame(2, (new UntrustedValue('2'))->asInt(false)->oneOf([1, 2])->int(false));
     }
 
     public function testMessageListsTheAllowedValues(): void
     {
         $this->expectExceptionMessage("Expected one of 'asc', 'desc', true, null, stdClass");
-        new UntrustedStrictValue(self::untyped('up'))->oneOf(['asc', 'desc', true, null, new \stdClass()]);
+        (new UntrustedStrictValue(self::untyped('up')))->oneOf(['asc', 'desc', true, null, new \stdClass()]);
     }
 
     public function testNullPasses(): void

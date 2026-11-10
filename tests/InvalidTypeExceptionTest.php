@@ -33,7 +33,7 @@ final class InvalidTypeExceptionTest extends TestCase
     {
         $previous = new \LogicException('inner');
 
-        self::assertSame($previous, new InvalidTypeException('', '', '', $previous)->getPrevious());
+        self::assertSame($previous, (new InvalidTypeException('', '', '', $previous))->getPrevious());
     }
 
     public function testSerializesToJson(): void

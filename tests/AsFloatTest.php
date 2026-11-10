@@ -13,7 +13,7 @@ final class AsFloatTest extends TestCase
 {
     public function testWrapsTheConvertedFloat(): void
     {
-        $float = new UntrustedValue('4.2', 'item.price')->asFloat();
+        $float = (new UntrustedValue('4.2', 'item.price'))->asFloat();
 
         self::assertSame(4.2, $float->value);
         self::assertSame('item.price', $float->path);
@@ -21,13 +21,13 @@ final class AsFloatTest extends TestCase
 
     public function testStrictValueWidensInts(): void
     {
-        self::assertSame(42.0, new UntrustedStrictValue(42)->asFloat()->value);
+        self::assertSame(42.0, (new UntrustedStrictValue(42))->asFloat()->value);
     }
 
     public function testStrictValueRejectsStrings(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue('4.2')->asFloat();
+        (new UntrustedStrictValue('4.2'))->asFloat();
     }
 
     public function testWrapsNullWhenNullable(): void

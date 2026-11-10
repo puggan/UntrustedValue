@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-$finder = new PhpCsFixer\Finder()
+$finder = (new PhpCsFixer\Finder())
     ->in([__DIR__ . '/src', __DIR__ . '/tests'])
     ->append([__FILE__]);
 
-return new PhpCsFixer\Config()
+return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)
     ->setRules([
         '@PER-CS' => true,
@@ -15,5 +15,7 @@ return new PhpCsFixer\Config()
         'strict_param' => true,
         'no_unused_imports' => true,
         'ordered_imports' => true,
+        // Wrap `new Foo()` in parentheses before calling on it, as PHP 8.3 and older require.
+        'new_expression_parentheses' => ['use_parentheses' => true],
     ])
     ->setFinder($finder);

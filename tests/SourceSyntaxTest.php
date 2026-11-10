@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -23,7 +22,9 @@ final class SourceSyntaxTest extends TestCase
         }
     }
 
-    #[DataProvider('sourceFiles')]
+    /**
+     * @dataProvider sourceFiles
+     */
     public function testNoCallOnABareNewExpression(string $file): void
     {
         $code = file_get_contents($file);

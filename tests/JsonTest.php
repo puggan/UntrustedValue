@@ -21,13 +21,13 @@ final class JsonTest extends TestCase
 
     public function testObjectsBecomeStdClass(): void
     {
-        self::assertInstanceOf(\stdClass::class, new UntrustedValue('{"a":1}')->json()->value);
+        self::assertInstanceOf(\stdClass::class, (new UntrustedValue('{"a":1}'))->json()->value);
     }
 
     public function testInvalidJsonNamesThePath(): void
     {
         try {
-            new UntrustedValue('{"broken":', 'payload')->json();
+            (new UntrustedValue('{"broken":', 'payload'))->json();
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('json', $exception->expectedType);
@@ -46,18 +46,18 @@ final class JsonTest extends TestCase
 
     public function testKeepsTheClass(): void
     {
-        self::assertSame(UntrustedStrictValue::class, new UntrustedStrictValue('[1]')->json()::class);
+        self::assertSame(UntrustedStrictValue::class, (new UntrustedStrictValue('[1]'))->json()::class);
     }
 
     public function testStrictValueRequiresAString(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue(42)->json();
+        (new UntrustedStrictValue(42))->json();
     }
 
     public function testLooseValueDecodesAConvertedScalar(): void
     {
-        self::assertSame(42, new UntrustedValue(42)->json()->value);
+        self::assertSame(42, (new UntrustedValue(42))->json()->value);
     }
 
     public function testFromJsonMessageIsUnchanged(): void

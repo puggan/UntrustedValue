@@ -13,7 +13,7 @@ final class AsIntTest extends TestCase
 {
     public function testWrapsTheConvertedInt(): void
     {
-        $int = new UntrustedValue('42', 'user.age')->asInt();
+        $int = (new UntrustedValue('42', 'user.age'))->asInt();
 
         self::assertSame(42, $int->value);
         self::assertSame('user.age', $int->path);
@@ -21,10 +21,10 @@ final class AsIntTest extends TestCase
 
     public function testStrictValueOnlyWrapsInts(): void
     {
-        self::assertSame(42, new UntrustedStrictValue(42)->asInt()->value);
+        self::assertSame(42, (new UntrustedStrictValue(42))->asInt()->value);
 
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue('42')->asInt();
+        (new UntrustedStrictValue('42'))->asInt();
     }
 
     public function testWrapsNullWhenNullable(): void
@@ -41,7 +41,7 @@ final class AsIntTest extends TestCase
     public function testThrowsWhenNotConvertible(): void
     {
         try {
-            new UntrustedValue('abc', 'user.age')->asInt();
+            (new UntrustedValue('abc', 'user.age'))->asInt();
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('non-numeric-string', $exception->givenType);

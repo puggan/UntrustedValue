@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\AbstractUntrustedValue;
 use Puggan\UntrustedValue\InvalidTypeException;
@@ -25,11 +24,11 @@ final class PropertyTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testReadsObjectProperties(string $class): void
     {
-        $age = new $class((object) ['age' => 42], 'user')->property('age');
+        $age = (new $class((object) ['age' => 42], 'user'))->property('age');
 
         self::assertInstanceOf($class, $age);
         self::assertSame(42, $age->value);
@@ -38,11 +37,11 @@ final class PropertyTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testReadsArrayKeys(string $class): void
     {
-        $age = new $class(['age' => 42], 'user')->property('age');
+        $age = (new $class(['age' => 42], 'user'))->property('age');
 
         self::assertInstanceOf($class, $age);
         self::assertSame(42, $age->value);
@@ -82,8 +81,8 @@ final class PropertyTest extends TestCase
             }
         };
 
-        self::assertSame(1, new UntrustedValue($object)->property('visible')->value);
-        self::assertNull(new UntrustedValue($object)->property('hidden', false)->value);
+        self::assertSame(1, (new UntrustedValue($object))->property('visible')->value);
+        self::assertNull((new UntrustedValue($object))->property('hidden', false)->value);
     }
 
     public function testMissingRequiredPropertyThrows(): void
@@ -118,11 +117,13 @@ final class PropertyTest extends TestCase
         yield 'bool' => [true, 'bool'];
     }
 
-    #[DataProvider('notContainers')]
+    /**
+     * @dataProvider notContainers
+     */
     public function testThrowsWhenTheValueHasNoProperties(mixed $value, string $givenType): void
     {
         try {
-            new UntrustedValue($value, 'user')->property('age', false);
+            (new UntrustedValue($value, 'user'))->property('age', false);
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('object|array', $exception->expectedType);
@@ -146,10 +147,12 @@ final class PropertyTest extends TestCase
         yield 'string' => ['age', 'age', false];
     }
 
-    #[DataProvider('hasPropertyCases')]
+    /**
+     * @dataProvider hasPropertyCases
+     */
     public function testHasProperty(mixed $value, string $name, bool $expected): void
     {
-        self::assertSame($expected, new UntrustedValue($value)->hasProperty($name));
+        self::assertSame($expected, (new UntrustedValue($value))->hasProperty($name));
     }
 
     public function testHasPropertyOnlySeesPublicProperties(): void
@@ -159,14 +162,14 @@ final class PropertyTest extends TestCase
             protected int $hidden = 2;
         };
 
-        self::assertTrue(new UntrustedValue($object)->hasProperty('visible'));
-        self::assertFalse(new UntrustedValue($object)->hasProperty('hidden'));
+        self::assertTrue((new UntrustedValue($object))->hasProperty('visible'));
+        self::assertFalse((new UntrustedValue($object))->hasProperty('hidden'));
     }
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testRequirePropertyReturnsThis(string $class): void
     {
         foreach ([(object) ['age' => null], ['age' => 42]] as $value) {
@@ -179,7 +182,7 @@ final class PropertyTest extends TestCase
     public function testRequirePropertyThrowsWhenMissing(): void
     {
         try {
-            new UntrustedValue(['name' => 'x'], 'user')->requireProperty('age');
+            (new UntrustedValue(['name' => 'x'], 'user'))->requireProperty('age');
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('required', $exception->filter);
@@ -188,11 +191,13 @@ final class PropertyTest extends TestCase
         }
     }
 
-    #[DataProvider('notContainers')]
+    /**
+     * @dataProvider notContainers
+     */
     public function testRequirePropertyThrowsWhenTheValueHasNoProperties(mixed $value, string $givenType): void
     {
         try {
-            new UntrustedValue($value, 'user')->requireProperty('age');
+            (new UntrustedValue($value, 'user'))->requireProperty('age');
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('object|array', $exception->expectedType);

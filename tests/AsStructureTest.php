@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\AbstractUntrustedValue;
 use Puggan\UntrustedValue\UntrustedStrictValue;
@@ -24,8 +23,8 @@ final class AsStructureTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testAsListReturnsThisForLists(string $class): void
     {
         foreach ([[], [1, 2, 3]] as $list) {
@@ -37,12 +36,12 @@ final class AsStructureTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testAsListTakesTheValuesOfOtherArrays(string $class): void
     {
         foreach ([[['a' => 1, 'b' => 2], [1, 2]], [[1 => 'b', 0 => 'a'], ['b', 'a']], [[3 => 'x'], ['x']]] as [$array, $expected]) {
-            $list = new $class($array, 'items')->asList();
+            $list = (new $class($array, 'items'))->asList();
 
             self::assertInstanceOf($class, $list);
             self::assertSame($expected, $list->value);
@@ -52,8 +51,8 @@ final class AsStructureTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testAsListTakesThePublicPropertyValuesOfObjects(string $class): void
     {
         $object = new class {
@@ -62,17 +61,19 @@ final class AsStructureTest extends TestCase
             public string $second = 'b';
         };
 
-        $list = new $class($object, 'items')->asList();
+        $list = (new $class($object, 'items'))->asList();
 
         self::assertInstanceOf($class, $list);
         self::assertSame([1, 'b'], $list->value);
         self::assertSame('items', $list->path);
     }
 
-    #[DataProvider('scalars')]
+    /**
+     * @dataProvider scalars
+     */
     public function testAsListThrowsForOtherValues(mixed $value, string $givenType): void
     {
-        $exception = self::wrongTypeFrom(static fn() => new UntrustedValue($value, 'items')->asList());
+        $exception = self::wrongTypeFrom(static fn() => (new UntrustedValue($value, 'items'))->asList());
 
         self::assertSame('list', $exception->expectedType);
         self::assertSame($givenType, $exception->givenType);
@@ -81,8 +82,8 @@ final class AsStructureTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testAsArrayReturnsThisForArrays(string $class): void
     {
         foreach ([[], [1, 2], ['a' => 1]] as $array) {
@@ -94,11 +95,11 @@ final class AsStructureTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testAsArrayCastsObjects(string $class): void
     {
-        $array = new $class((object) ['id' => 7, 'name' => 'x'], 'user')->asArray();
+        $array = (new $class((object) ['id' => 7, 'name' => 'x'], 'user'))->asArray();
 
         self::assertInstanceOf($class, $array);
         self::assertSame(['id' => 7, 'name' => 'x'], $array->value);
@@ -115,10 +116,12 @@ final class AsStructureTest extends TestCase
         yield 'bool' => [true, 'bool'];
     }
 
-    #[DataProvider('scalars')]
+    /**
+     * @dataProvider scalars
+     */
     public function testAsArrayThrowsForOtherValues(mixed $value, string $givenType): void
     {
-        $exception = self::wrongTypeFrom(static fn() => new UntrustedValue($value)->asArray());
+        $exception = self::wrongTypeFrom(static fn() => (new UntrustedValue($value))->asArray());
 
         self::assertSame('array', $exception->expectedType);
         self::assertSame($givenType, $exception->givenType);
@@ -126,8 +129,8 @@ final class AsStructureTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testAsObjectReturnsThisForObjects(string $class): void
     {
         $untrusted = new $class(new \DateTimeImmutable());
@@ -137,11 +140,11 @@ final class AsStructureTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testAsObjectCastsNonListArrays(string $class): void
     {
-        $object = new $class(['id' => 7], 'user')->asObject();
+        $object = (new $class(['id' => 7], 'user'))->asObject();
 
         self::assertInstanceOf($class, $object);
         self::assertEquals((object) ['id' => 7], $object->value);
@@ -158,10 +161,12 @@ final class AsStructureTest extends TestCase
         yield from self::scalars();
     }
 
-    #[DataProvider('notObjects')]
+    /**
+     * @dataProvider notObjects
+     */
     public function testAsObjectThrowsForOtherValues(mixed $value, string $givenType): void
     {
-        $exception = self::wrongTypeFrom(static fn() => new UntrustedValue($value)->asObject());
+        $exception = self::wrongTypeFrom(static fn() => (new UntrustedValue($value))->asObject());
 
         self::assertSame('object', $exception->expectedType);
         self::assertSame($givenType, $exception->givenType);
@@ -169,8 +174,8 @@ final class AsStructureTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testNullReturnsThisWhenNullable(string $class): void
     {
         $null = new $class(null, 'user');
@@ -184,7 +189,7 @@ final class AsStructureTest extends TestCase
     {
         $null = new UntrustedValue(null, 'user');
 
-        foreach (['list' => $null->asList(...), 'array' => $null->asArray(...), 'object' => $null->asObject(...)] as $type => $method) {
+        foreach (['list' => [$null, 'asList'], 'array' => [$null, 'asArray'], 'object' => [$null, 'asObject']] as $type => $method) {
             $exception = self::wrongTypeFrom(static fn() => $method(false));
 
             self::assertSame($type, $exception->expectedType);
@@ -216,11 +221,11 @@ final class AsStructureTest extends TestCase
     /**
      * @param \Traversable<mixed, mixed> $traversable
      * @param array<array-key, mixed> $expected
+     * @dataProvider traversables
      */
-    #[DataProvider('traversables')]
     public function testAsListTakesTheItemsOfATraversable(\Traversable $traversable, array $expected): void
     {
-        $list = new UntrustedStrictValue($traversable, 'items')->asList();
+        $list = (new UntrustedStrictValue($traversable, 'items'))->asList();
 
         self::assertSame(array_values($expected), $list->value);
         self::assertSame('items', $list->path);
@@ -230,11 +235,11 @@ final class AsStructureTest extends TestCase
     /**
      * @param \Traversable<mixed, mixed> $traversable
      * @param array<array-key, mixed> $expected
+     * @dataProvider traversables
      */
-    #[DataProvider('traversables')]
     public function testAsArrayTakesTheItemsOfATraversableWithKeys(\Traversable $traversable, array $expected): void
     {
-        $array = new UntrustedValue($traversable, 'items')->asArray();
+        $array = (new UntrustedValue($traversable, 'items'))->asArray();
 
         self::assertSame($expected, $array->value);
         self::assertSame('items', $array->path);
@@ -247,7 +252,7 @@ final class AsStructureTest extends TestCase
             yield 'k' => 2;
         })();
 
-        self::assertSame(['k' => 2], new UntrustedValue($generator)->asArray()->value);
+        self::assertSame(['k' => 2], (new UntrustedValue($generator))->asArray()->value);
     }
 
     public function testAsArrayThrowsForKeysThatAreNotIntOrString(): void
@@ -256,7 +261,7 @@ final class AsStructureTest extends TestCase
             yield new \stdClass() => 'value';
         })();
 
-        $exception = self::wrongTypeFrom(static fn() => new UntrustedValue($generator, 'items')->asArray());
+        $exception = self::wrongTypeFrom(static fn() => (new UntrustedValue($generator, 'items'))->asArray());
 
         self::assertSame('array-key', $exception->expectedType);
         self::assertSame('stdClass', $exception->givenType);
@@ -283,7 +288,7 @@ final class AsStructureTest extends TestCase
             }
         };
 
-        self::assertSame(['visible' => 1], new UntrustedValue($object)->asArray()->value);
+        self::assertSame(['visible' => 1], (new UntrustedValue($object))->asArray()->value);
     }
 
     private static function wrongTypeFrom(callable $call): WrongTypeException

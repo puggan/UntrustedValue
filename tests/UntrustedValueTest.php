@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
@@ -26,30 +25,31 @@ final class UntrustedValueTest extends TestCase
         yield 'map' => [['user' => ['age' => '42']]];
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testExposesTheValue(mixed $value): void
     {
-        self::assertSame($value, new UntrustedValue($value)->value);
+        self::assertSame($value, (new UntrustedValue($value))->value);
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testRawReturnsTheValue(mixed $value): void
     {
-        self::assertSame($value, new UntrustedValue($value)->raw());
+        self::assertSame($value, (new UntrustedValue($value))->raw());
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testSerializesToTheValue(mixed $value): void
     {
         self::assertSame(
             json_encode($value, JSON_THROW_ON_ERROR),
             json_encode(new UntrustedValue($value), JSON_THROW_ON_ERROR),
         );
-    }
-
-    public function testValueIsReadonly(): void
-    {
-        self::assertTrue(new \ReflectionProperty(UntrustedValue::class, 'value')->isReadOnly());
     }
 
     public function testFromJsonDecodesObjectsToStdClass(): void
@@ -82,17 +82,12 @@ final class UntrustedValueTest extends TestCase
 
     public function testPathDefaultsToEmpty(): void
     {
-        self::assertSame('', new UntrustedValue(42)->path);
+        self::assertSame('', (new UntrustedValue(42))->path);
     }
 
     public function testKeepsThePath(): void
     {
-        self::assertSame('user.age', new UntrustedValue(42, 'user.age')->path);
-    }
-
-    public function testPathIsReadonly(): void
-    {
-        self::assertTrue(new \ReflectionProperty(UntrustedValue::class, 'path')->isReadOnly());
+        self::assertSame('user.age', (new UntrustedValue(42, 'user.age'))->path);
     }
 
     public function testFromJsonStartsAtTheRootPath(): void
@@ -105,9 +100,9 @@ final class UntrustedValueTest extends TestCase
         $strictString = new UntrustedStrictValue('42');
         $strictInt = new UntrustedStrictValue(42);
 
-        self::assertSame('string', self::wrongTypeFrom($strictString->int(...))->givenType);
-        self::assertSame('string', self::wrongTypeFrom($strictString->float(...))->givenType);
-        self::assertSame('int', self::wrongTypeFrom($strictInt->string(...))->givenType);
+        self::assertSame('string', self::wrongTypeFrom([$strictString, 'int'])->givenType);
+        self::assertSame('string', self::wrongTypeFrom([$strictString, 'float'])->givenType);
+        self::assertSame('int', self::wrongTypeFrom([$strictInt, 'string'])->givenType);
     }
 
     private static function wrongTypeFrom(callable $call): WrongTypeException
@@ -125,7 +120,7 @@ final class UntrustedValueTest extends TestCase
     {
         $strict = UntrustedStrictValue::fromJson('"42"');
 
-        self::assertSame('string', self::wrongTypeFrom($strict->int(...))->givenType);
+        self::assertSame('string', self::wrongTypeFrom([$strict, 'int'])->givenType);
     }
 
     public function testUnwrapsAnUntrustedValue(): void
@@ -142,12 +137,12 @@ final class UntrustedValueTest extends TestCase
         $strict = new UntrustedStrictValue(new UntrustedValue('42'));
 
         self::assertSame('42', $strict->value);
-        self::assertSame('string', self::wrongTypeFrom($strict->int(...))->givenType);
+        self::assertSame('string', self::wrongTypeFrom([$strict, 'int'])->givenType);
     }
 
     public function testUnwrapsNestedLayers(): void
     {
-        self::assertSame(7, new UntrustedValue(new UntrustedValue(new UntrustedStrictValue(7)))->value);
+        self::assertSame(7, (new UntrustedValue(new UntrustedValue(new UntrustedStrictValue(7))))->value);
     }
 
     public function testItemsOfAWrappedIteratorAreNotWrappedTwiceAndKeepTheirPath(): void

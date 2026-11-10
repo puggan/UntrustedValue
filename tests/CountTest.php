@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\InvalidTypeException;
 use Puggan\UntrustedValue\UntrustedValue;
@@ -24,7 +23,9 @@ final class CountTest extends TestCase
         yield 'stdClass' => [(object) ['a' => 1], 1];
     }
 
-    #[DataProvider('countable')]
+    /**
+     * @dataProvider countable
+     */
     public function testReturnsThisInRange(mixed $value, int $count): void
     {
         $untrusted = new UntrustedValue($value);
@@ -36,7 +37,7 @@ final class CountTest extends TestCase
     public function testTooFewThrows(): void
     {
         try {
-            new UntrustedValue([], 'tags')->count(min: 1);
+            (new UntrustedValue([], 'tags'))->count(min: 1);
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('minCount', $exception->filter);
@@ -48,7 +49,7 @@ final class CountTest extends TestCase
     public function testTooManyThrows(): void
     {
         try {
-            new UntrustedValue([1, 2, 3], 'tags')->count(2);
+            (new UntrustedValue([1, 2, 3], 'tags'))->count(2);
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('maxCount', $exception->filter);
@@ -69,12 +70,12 @@ final class CountTest extends TestCase
         };
 
         $this->expectException(InvalidTypeException::class);
-        new UntrustedValue($object)->count(min: 2);
+        (new UntrustedValue($object))->count(min: 2);
     }
 
     public function testCollectsAGeneratorSoItCanStillBeUsed(): void
     {
-        $tags = new UntrustedValue(['a', '', 'b'], 'tags')
+        $tags = (new UntrustedValue(['a', '', 'b'], 'tags'))
             ->filter(static fn(UntrustedValue $tag): bool => $tag->string(false) !== '')
             ->count(10, 1);
 
@@ -85,7 +86,7 @@ final class CountTest extends TestCase
     public function testCountingAnEmptyFilterResultFails(): void
     {
         $this->expectException(InvalidTypeException::class);
-        new UntrustedValue(['', ''])->filter(static fn(UntrustedValue $tag): bool => $tag->string(false) !== '')->count(min: 1);
+        (new UntrustedValue(['', '']))->filter(static fn(UntrustedValue $tag): bool => $tag->string(false) !== '')->count(min: 1);
     }
 
     public function testNullPasses(): void
@@ -98,7 +99,7 @@ final class CountTest extends TestCase
     public function testScalarThrows(): void
     {
         try {
-            new UntrustedValue('abc', 'tags')->count();
+            (new UntrustedValue('abc', 'tags'))->count();
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('object|array', $exception->expectedType);
@@ -109,6 +110,6 @@ final class CountTest extends TestCase
     public function testPluralInMessages(): void
     {
         $this->expectExceptionMessage('Expected at most 1 item at tags');
-        new UntrustedValue([1, 2], 'tags')->count(1);
+        (new UntrustedValue([1, 2], 'tags'))->count(1);
     }
 }

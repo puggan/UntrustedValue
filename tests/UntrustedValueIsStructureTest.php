@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedValue;
 
@@ -29,7 +28,9 @@ final class UntrustedValueIsStructureTest extends TestCase
         yield 'bool' => [true, false, false, false, false, false];
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testChecksTheStructure(mixed $value, bool $object, bool $array, bool $list, bool $map, bool $properties): void
     {
         $untrusted = new UntrustedValue($value);

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\AbstractUntrustedValue;
 use Puggan\UntrustedValue\UntrustedStrictValue;
@@ -24,12 +23,12 @@ final class IterateTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testYieldListYieldsEachItem(string $class): void
     {
         $items = [];
-        foreach (new $class(['a', 'b'], 'tags')->yieldList() as $index => $item) {
+        foreach ((new $class(['a', 'b'], 'tags'))->yieldList() as $index => $item) {
             self::assertInstanceOf($class, $item);
             $items[$index] = [$item->value, $item->path];
         }
@@ -40,7 +39,7 @@ final class IterateTest extends TestCase
     public function testYieldListUsesAsList(): void
     {
         $values = [];
-        foreach (new UntrustedValue(['x' => 1, 'y' => 2])->yieldList() as $index => $item) {
+        foreach ((new UntrustedValue(['x' => 1, 'y' => 2]))->yieldList() as $index => $item) {
             $values[$index] = $item->value;
         }
 
@@ -49,12 +48,12 @@ final class IterateTest extends TestCase
 
     /**
      * @param class-string<AbstractUntrustedValue<mixed>> $class
+     * @dataProvider classes
      */
-    #[DataProvider('classes')]
     public function testYieldArrayYieldsKeys(string $class): void
     {
         $items = [];
-        foreach (new $class((object) ['id' => 7, 'name' => 'x'], 'user')->yieldArray() as $key => $item) {
+        foreach ((new $class((object) ['id' => 7, 'name' => 'x'], 'user'))->yieldArray() as $key => $item) {
             self::assertInstanceOf($class, $item);
             $items[] = [$key, $item->value, $item->path];
         }
@@ -96,13 +95,13 @@ final class IterateTest extends TestCase
     public function testYieldThrowsWhenCalledNotWhenIterated(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue('abc')->yieldList();
+        (new UntrustedValue('abc'))->yieldList();
     }
 
     public function testYieldArrayThrowsWhenCalled(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue(42)->yieldArray();
+        (new UntrustedValue(42))->yieldArray();
     }
 
     public function testYieldListOnlySeesPublicProperties(): void
@@ -115,7 +114,7 @@ final class IterateTest extends TestCase
 
         self::assertSame([1, 'b'], array_map(
             static fn(UntrustedValue $item): mixed => $item->value,
-            new UntrustedValue($object)->list(),
+            (new UntrustedValue($object))->list(),
         ));
     }
 
@@ -132,7 +131,7 @@ final class IterateTest extends TestCase
         })();
         self::assertSame(['x' => 10, 'y' => 20], array_map(
             static fn(UntrustedValue $item): mixed => $item->value,
-            new UntrustedValue($generator)->array(),
+            (new UntrustedValue($generator))->array(),
         ));
     }
 
@@ -143,7 +142,7 @@ final class IterateTest extends TestCase
         })();
 
         $paths = [];
-        foreach (new UntrustedValue($generator, 'user')->yieldArray() as $key => $item) {
+        foreach ((new UntrustedValue($generator, 'user'))->yieldArray() as $key => $item) {
             self::assertInstanceOf(\stdClass::class, $key);
             $paths[] = $item->path;
         }
@@ -158,7 +157,7 @@ final class IterateTest extends TestCase
         })();
 
         try {
-            new UntrustedValue($generator, 'data')->array();
+            (new UntrustedValue($generator, 'data'))->array();
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('array-key', $exception->expectedType);

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\InvalidTypeException;
 use Puggan\UntrustedValue\UntrustedStrictValue;
@@ -30,7 +29,9 @@ final class RangeTest extends TestCase
         yield 'null below a negative max' => [null, null, -1];
     }
 
-    #[DataProvider('inRange')]
+    /**
+     * @dataProvider inRange
+     */
     public function testReturnsThisInRange(mixed $value, int|float|string|null $min, int|float|string|null $max): void
     {
         $untrusted = new UntrustedStrictValue($value);
@@ -41,7 +42,7 @@ final class RangeTest extends TestCase
     public function testBelowMinThrows(): void
     {
         try {
-            new UntrustedValue(-1, 'user.age')->range(0, 150);
+            (new UntrustedValue(-1, 'user.age'))->range(0, 150);
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('min', $exception->filter);
@@ -53,7 +54,7 @@ final class RangeTest extends TestCase
     public function testAboveMaxThrows(): void
     {
         try {
-            new UntrustedValue(151, 'user.age')->range(0, 150);
+            (new UntrustedValue(151, 'user.age'))->range(0, 150);
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('max', $exception->filter);
@@ -65,7 +66,7 @@ final class RangeTest extends TestCase
     public function testMessageAtTheRoot(): void
     {
         $this->expectExceptionMessage('Expected at most 1.5');
-        new UntrustedValue(2)->range(max: 1.5);
+        (new UntrustedValue(2))->range(max: 1.5);
     }
 
     public function testChainsAfterAConversion(): void

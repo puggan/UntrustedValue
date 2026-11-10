@@ -12,7 +12,7 @@ final class ReplaceTest extends TestCase
 {
     public function testReplacesAnIdenticalValue(): void
     {
-        $replaced = new UntrustedStrictValue('N/A', 'user.age')->replace('N/A', null);
+        $replaced = (new UntrustedStrictValue('N/A', 'user.age'))->replace('N/A', null);
 
         self::assertInstanceOf(UntrustedStrictValue::class, $replaced);
         self::assertNull($replaced->value);
@@ -52,8 +52,8 @@ final class ReplaceTest extends TestCase
 
     public function testBlankDefaultReplacesTheEmptyString(): void
     {
-        self::assertNull(new UntrustedValue('')->blankDefault()->value);
-        self::assertSame('none', new UntrustedValue('')->blankDefault('none')->value);
+        self::assertNull((new UntrustedValue(''))->blankDefault()->value);
+        self::assertSame('none', (new UntrustedValue(''))->blankDefault('none')->value);
     }
 
     public function testBlankDefaultKeepsOtherValues(): void
@@ -67,6 +67,6 @@ final class ReplaceTest extends TestCase
 
     public function testBlankDefaultAfterTrim(): void
     {
-        self::assertNull(new UntrustedValue('   ')->trim()->blankDefault()->value);
+        self::assertNull((new UntrustedValue('   '))->trim()->blankDefault()->value);
     }
 }

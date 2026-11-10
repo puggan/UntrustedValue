@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedValue;
 use Puggan\UntrustedValue\WrongTypeException;
@@ -26,7 +25,9 @@ final class RequireNullScalarTest extends TestCase
         yield 'object' => [new \stdClass()];
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testRequireNullMatchesIsNull(mixed $value): void
     {
         $untrusted = new UntrustedValue($value, 'data');
@@ -41,7 +42,9 @@ final class RequireNullScalarTest extends TestCase
         }
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testRequireScalarMatchesIsScalar(mixed $value): void
     {
         $untrusted = new UntrustedValue($value, 'data');

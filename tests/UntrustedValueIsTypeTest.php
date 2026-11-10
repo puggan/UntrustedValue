@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
@@ -34,8 +33,8 @@ final class UntrustedValueIsTypeTest extends TestCase
      * @param array{bool, bool} $int
      * @param array{bool, bool} $float
      * @param array{bool, bool} $string
+     * @dataProvider values
      */
-    #[DataProvider('values')]
     public function testMatchesTheConversionMethods(mixed $value, array $int, array $float, array $string): void
     {
         $untrusted = new UntrustedValue($value);

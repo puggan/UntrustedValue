@@ -16,7 +16,7 @@ final class RawMapTest extends TestCase
     {
         self::assertSame(
             [1, 2],
-            new UntrustedValue(['x' => '1', 'y' => '2'])->listRawMap(static fn(UntrustedValue $item): int => $item->int(false)),
+            (new UntrustedValue(['x' => '1', 'y' => '2']))->listRawMap(static fn(UntrustedValue $item): int => $item->int(false)),
         );
     }
 
@@ -24,7 +24,7 @@ final class RawMapTest extends TestCase
     {
         self::assertSame(
             ['id' => 'id=7', 'name' => 'name=x'],
-            new UntrustedValue((object) ['id' => 7, 'name' => 'x'])->arrayRawMap(
+            (new UntrustedValue((object) ['id' => 7, 'name' => 'x']))->arrayRawMap(
                 static fn(UntrustedValue $item, int|string $key): string => $key . '=' . $item->string(false),
             ),
         );
@@ -32,7 +32,7 @@ final class RawMapTest extends TestCase
 
     public function testResultsAreNotWrappedOrUnwrapped(): void
     {
-        $results = new UntrustedValue(['1'])->listRawMap(static fn(UntrustedValue $item): UntrustedStrictValue => $item->asInt(false));
+        $results = (new UntrustedValue(['1']))->listRawMap(static fn(UntrustedValue $item): UntrustedStrictValue => $item->asInt(false));
 
         self::assertSame(1, $results[0]->value);
     }
@@ -40,7 +40,7 @@ final class RawMapTest extends TestCase
     public function testYieldRawMapKeepsKeysAndRunsLazily(): void
     {
         $calls = 0;
-        $generator = new UntrustedValue(['a' => 1, 'b' => 2])->yieldRawMap(static function (UntrustedValue $item) use (&$calls): int {
+        $generator = (new UntrustedValue(['a' => 1, 'b' => 2]))->yieldRawMap(static function (UntrustedValue $item) use (&$calls): int {
             $calls++;
 
             return $item->int(false) * 10;
@@ -54,7 +54,7 @@ final class RawMapTest extends TestCase
     public function testMapperExceptionsComeThrough(): void
     {
         try {
-            new UntrustedValue(['5', '500'], 'ages')->listRawMap(static fn(UntrustedValue $item): int => $item->asInt(false)->range(0, 150)->int());
+            (new UntrustedValue(['5', '500'], 'ages'))->listRawMap(static fn(UntrustedValue $item): int => $item->asInt(false)->range(0, 150)->int());
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('ages.1', $exception->path);
@@ -64,7 +64,7 @@ final class RawMapTest extends TestCase
     public function testValueIsCheckedWhenCalled(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue('abc')->yieldRawMap(static fn(UntrustedValue $item): mixed => $item->value);
+        (new UntrustedValue('abc'))->yieldRawMap(static fn(UntrustedValue $item): mixed => $item->value);
     }
 
     public function testNullGivesNothingWhenNullable(): void

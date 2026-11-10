@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\InvalidTypeException;
 use Puggan\UntrustedValue\UntrustedStrictValue;
@@ -28,7 +27,9 @@ final class LengthTest extends TestCase
         yield 'null' => [null, 3, 1];
     }
 
-    #[DataProvider('inRange')]
+    /**
+     * @dataProvider inRange
+     */
     public function testReturnsThisInRange(mixed $value, ?int $max, int $min): void
     {
         $untrusted = new UntrustedValue($value);
@@ -39,7 +40,7 @@ final class LengthTest extends TestCase
     public function testTooShortThrows(): void
     {
         try {
-            new UntrustedValue('ab', 'user.name')->length(min: 3);
+            (new UntrustedValue('ab', 'user.name'))->length(min: 3);
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('minLength', $exception->filter);
@@ -51,7 +52,7 @@ final class LengthTest extends TestCase
     public function testTooLongThrows(): void
     {
         try {
-            new UntrustedValue('Thorbjörn', 'user.name')->length(8);
+            (new UntrustedValue('Thorbjörn', 'user.name'))->length(8);
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('maxLength', $exception->filter);
@@ -62,18 +63,18 @@ final class LengthTest extends TestCase
     public function testStrictValueRequiresAString(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue(700)->length(3);
+        (new UntrustedStrictValue(700))->length(3);
     }
 
     public function testValuesWithoutAStringThrow(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue(['abc'])->length(3);
+        (new UntrustedValue(['abc']))->length(3);
     }
 
     public function testSingularInMessages(): void
     {
         $this->expectExceptionMessage('Expected at least 1 character at name');
-        new UntrustedValue('', 'name')->length(min: 1);
+        (new UntrustedValue('', 'name'))->length(min: 1);
     }
 }

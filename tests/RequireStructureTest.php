@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedValue;
 use Puggan\UntrustedValue\WrongTypeException;
@@ -29,8 +28,8 @@ final class RequireStructureTest extends TestCase
 
     /**
      * Each require*() returns $this exactly when its is*() is true, for both values of $nullable.
+     * @dataProvider values
      */
-    #[DataProvider('values')]
     public function testMatchesTheIsMethods(mixed $value): void
     {
         $untrusted = new UntrustedValue($value, 'data');

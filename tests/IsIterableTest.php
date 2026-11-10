@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedValue;
 
@@ -26,11 +25,13 @@ final class IsIterableTest extends TestCase
         yield 'int' => [42, false];
     }
 
-    #[DataProvider('values')]
+    /**
+     * @dataProvider values
+     */
     public function testChecksIsIterable(mixed $value, bool $expected): void
     {
-        self::assertSame($expected, new UntrustedValue($value)->isIterable());
-        self::assertSame($expected, new UntrustedValue($value)->isIterable(false));
+        self::assertSame($expected, (new UntrustedValue($value))->isIterable());
+        self::assertSame($expected, (new UntrustedValue($value))->isIterable(false));
     }
 
     public function testNullPassesWhenNullable(): void

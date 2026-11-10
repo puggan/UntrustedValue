@@ -29,7 +29,7 @@ final class MatchTest extends TestCase
     public function testMatchThrowsWithoutAMatch(): void
     {
         try {
-            new UntrustedValue('abc', 'user.code')->match('/^\d+$/');
+            (new UntrustedValue('abc', 'user.code'))->match('/^\d+$/');
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('match', $exception->filter);
@@ -41,7 +41,7 @@ final class MatchTest extends TestCase
     public function testNotMatchThrowsOnAMatch(): void
     {
         try {
-            new UntrustedValue('<script>', 'comment')->notMatch('/[<>]/');
+            (new UntrustedValue('<script>', 'comment'))->notMatch('/[<>]/');
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('notMatch', $exception->filter);
@@ -64,7 +64,7 @@ final class MatchTest extends TestCase
     public function testStrictMatchRequiresAString(): void
     {
         try {
-            new UntrustedStrictValue(self::untyped(700))->match('/^7/');
+            (new UntrustedStrictValue(self::untyped(700)))->match('/^7/');
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('string', $exception->expectedType);
@@ -76,7 +76,7 @@ final class MatchTest extends TestCase
     {
         foreach ([null, true, ['a'], new \stdClass()] as $value) {
             try {
-                new UntrustedValue(self::untyped($value))->match('/a/');
+                (new UntrustedValue(self::untyped($value)))->match('/a/');
                 self::fail('Expected a WrongTypeException');
             } catch (WrongTypeException $exception) {
                 self::assertSame('string', $exception->expectedType);
@@ -100,13 +100,13 @@ final class MatchTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('No ending delimiter');
-        new UntrustedValue('abc')->match('/abc');
+        (new UntrustedValue('abc'))->match('/abc');
     }
 
     public function testPcreFailureOnTheValueThrowsInvalidType(): void
     {
         try {
-            new UntrustedValue("\xFF", 'name')->match('/./u');
+            (new UntrustedValue("\xFF", 'name'))->match('/./u');
             self::fail('Expected an InvalidTypeException');
         } catch (InvalidTypeException $exception) {
             self::assertSame('match', $exception->filter);

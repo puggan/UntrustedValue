@@ -33,7 +33,7 @@ final class TypedCollectionTest extends TestCase
 
     public function testGeneratorsKeepKeysAndConvertLazily(): void
     {
-        $generator = new UntrustedValue(['a' => '1', 'b' => 'x'])->yieldInt();
+        $generator = (new UntrustedValue(['a' => '1', 'b' => 'x']))->yieldInt();
 
         self::assertSame('a', $generator->key());
         self::assertSame(1, $generator->current());
@@ -55,7 +55,7 @@ final class TypedCollectionTest extends TestCase
     public function testNullItemsThrowWhenNotNullable(): void
     {
         try {
-            new UntrustedValue([1, null], 'ids')->listInt(false);
+            (new UntrustedValue([1, null], 'ids'))->listInt(false);
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('ids.1', $exception->path);
@@ -66,7 +66,7 @@ final class TypedCollectionTest extends TestCase
     public function testStrictItemsStayStrict(): void
     {
         try {
-            new UntrustedStrictValue([1, '2'], 'ids')->listInt();
+            (new UntrustedStrictValue([1, '2'], 'ids'))->listInt();
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('ids.1', $exception->path);
@@ -77,7 +77,7 @@ final class TypedCollectionTest extends TestCase
     public function testScalarRejectsStructures(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue([1, [2]])->listScalar();
+        (new UntrustedValue([1, [2]]))->listScalar();
     }
 
     public function testNullContainerThrows(): void

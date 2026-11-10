@@ -14,7 +14,7 @@ final class ChainMapTest extends TestCase
 {
     public function testMapsWithKeysAndKeepsPaths(): void
     {
-        $mapped = new UntrustedValue(['a' => '1', 'b' => '2'], 'n')->map(static fn(UntrustedValue $item): int => $item->int(false) * 10);
+        $mapped = (new UntrustedValue(['a' => '1', 'b' => '2'], 'n'))->map(static fn(UntrustedValue $item): int => $item->int(false) * 10);
 
         $items = [];
         foreach ($mapped as $key => $item) {
@@ -30,10 +30,10 @@ final class ChainMapTest extends TestCase
         $mapper = static fn(UntrustedValue $item): UntrustedStrictValue => $item->asInt(false);
 
         // Each map() result is a generator, which can only be iterated once.
-        self::assertSame([1, 2], new UntrustedValue(['1', '2'])->map($mapper)->listInt(false));
+        self::assertSame([1, 2], (new UntrustedValue(['1', '2']))->map($mapper)->listInt(false));
         self::assertSame(
             [UntrustedValue::class, UntrustedValue::class],
-            array_map(get_class(...), new UntrustedValue(['1', '2'])->map($mapper)->list()),
+            array_map('get_class', (new UntrustedValue(['1', '2']))->map($mapper)->list()),
         );
     }
 
@@ -80,7 +80,7 @@ final class ChainMapTest extends TestCase
     {
         $paths = array_map(
             static fn(UntrustedValue $item): string => $item->path,
-            new UntrustedValue(['a' => 1], 'n')->map(static fn(UntrustedValue $item): string => 'x')->list(),
+            (new UntrustedValue(['a' => 1], 'n'))->map(static fn(UntrustedValue $item): string => 'x')->list(),
         );
 
         self::assertSame(['n.a'], $paths);
@@ -89,7 +89,7 @@ final class ChainMapTest extends TestCase
     public function testKeepsTheClassAndRunsLazily(): void
     {
         $calls = 0;
-        $mapped = new UntrustedStrictValue([1, 2])->map(static function (UntrustedStrictValue $item) use (&$calls): string {
+        $mapped = (new UntrustedStrictValue([1, 2]))->map(static function (UntrustedStrictValue $item) use (&$calls): string {
             $calls++;
 
             return (string) $item->int(false);
@@ -104,6 +104,6 @@ final class ChainMapTest extends TestCase
     public function testValueIsCheckedWhenCalled(): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedValue('abc')->map(static fn(): int => 1);
+        (new UntrustedValue('abc'))->map(static fn(): int => 1);
     }
 }

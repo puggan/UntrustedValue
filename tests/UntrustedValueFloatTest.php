@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Puggan\UntrustedValue\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Puggan\UntrustedValue\UntrustedStrictValue;
 use Puggan\UntrustedValue\UntrustedValue;
@@ -58,36 +57,44 @@ final class UntrustedValueFloatTest extends TestCase
         yield 'string negative infinite' => ['-1e999', 'non-finite-numeric-string'];
     }
 
-    #[DataProvider('numbers')]
+    /**
+     * @dataProvider numbers
+     */
     public function testReturnsNumbers(int|float $value, float $expected): void
     {
-        self::assertSame($expected, new UntrustedValue($value)->float());
-        self::assertSame($expected, new UntrustedStrictValue($value)->float());
+        self::assertSame($expected, (new UntrustedValue($value))->float());
+        self::assertSame($expected, (new UntrustedStrictValue($value))->float());
     }
 
     public function testReturnsNan(): void
     {
-        self::assertNan(new UntrustedStrictValue(NAN)->float());
+        self::assertNan((new UntrustedStrictValue(NAN))->float());
     }
 
-    #[DataProvider('numericStrings')]
+    /**
+     * @dataProvider numericStrings
+     */
     public function testConvertsWhenNotStrict(string $value, float $expected): void
     {
-        self::assertSame($expected, new UntrustedValue($value)->float());
+        self::assertSame($expected, (new UntrustedValue($value))->float());
     }
 
-    #[DataProvider('numericStrings')]
+    /**
+     * @dataProvider numericStrings
+     */
     public function testRejectsConversionWhenStrict(string $value, float $nonStrictResult): void
     {
         $this->expectException(WrongTypeException::class);
-        new UntrustedStrictValue($value)->float();
+        (new UntrustedStrictValue($value))->float();
     }
 
-    #[DataProvider('notConvertible')]
+    /**
+     * @dataProvider notConvertible
+     */
     public function testRejectsOtherValues(mixed $value, string $givenType): void
     {
         try {
-            new UntrustedValue($value, 'item.price')->float();
+            (new UntrustedValue($value, 'item.price'))->float();
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('float', $exception->expectedType);
@@ -106,7 +113,7 @@ final class UntrustedValueFloatTest extends TestCase
     public function testNullIsRejectedWhenNotNullable(): void
     {
         try {
-            new UntrustedValue(null)->float(nullable: false);
+            (new UntrustedValue(null))->float(nullable: false);
             self::fail('Expected a WrongTypeException');
         } catch (WrongTypeException $exception) {
             self::assertSame('null', $exception->givenType);
