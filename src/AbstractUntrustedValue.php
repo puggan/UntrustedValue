@@ -359,6 +359,49 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * This object, when string() of the value matches $regexp (see preg_match()). So in
+     * UntrustedValue an int like 700 is checked as "700", while UntrustedStrictValue requires a
+     * string. Null is rejected.
+     *
+     * @return $this
+     *
+     * @throws WrongTypeException When string() can't return a string.
+     * @throws InvalidTypeException When the string does not match, or PCRE fails on it.
+     * @throws \InvalidArgumentException When $regexp is not a valid pattern.
+     */
+    public function match(string $regexp): static
+    {
+        if (!$this->pregMatch($this->string(false), $regexp, 'match')) {
+            throw $this->invalid('match', sprintf('a match for %s', $regexp));
+        }
+
+        return $this;
+    }
+
+    /**
+     * This object, when string() of the value does not match $regexp (see preg_match()). So in
+     * UntrustedValue an int like 700 is checked as "700". A value string() can't return a string
+     * for, like null, an array or, in UntrustedStrictValue, an int, can't match, so it passes.
+     *
+     * @return $this
+     *
+     * @throws InvalidTypeException When the string matches, or PCRE fails on it.
+     * @throws \InvalidArgumentException When $regexp is not a valid pattern.
+     */
+    public function notMatch(string $regexp): static
+    {
+        if (!$this->isString(false)) {
+            return $this;
+        }
+
+        if ($this->pregMatch($this->string(false), $regexp, 'notMatch')) {
+            throw $this->invalid('notMatch', sprintf('no match for %s', $regexp));
+        }
+
+        return $this;
+    }
+
+    /**
      * Returns the raw value, unchanged and unchecked.
      *
      * @return TValue
@@ -491,6 +534,31 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     {
         return $this->value;
     }
+    /**
+     * Whether $subject matches $regexp. An invalid pattern is the caller's mistake, so it
+     * throws an \InvalidArgumentException. Other PCRE errors, like an exhausted backtrack limit or
+     * invalid UTF-8 with the u modifier, come from the value, so they throw an InvalidTypeException
+     * for $filter.
+     *
+     * @throws InvalidTypeException When PCRE fails on the value.
+     * @throws \InvalidArgumentException When $regexp is not a valid pattern.
+     */
+    private function pregMatch(string $subject, string $regexp, string $filter): bool
+    {
+        error_clear_last();
+        $result = @preg_match($regexp, $subject);
+
+        if ($result !== false) {
+            return $result === 1;
+        }
+
+        if (preg_last_error() === PREG_INTERNAL_ERROR) {
+            throw new \InvalidArgumentException(error_get_last()['message'] ?? preg_last_error_msg());
+        }
+
+        throw $this->invalid($filter, sprintf('a value PCRE can check against %s (%s)', $regexp, preg_last_error_msg()));
+    }
+
     /**
      * An InvalidTypeException for a filter the value failed, with a message like
      * "Expected at least 0 at user.age".
