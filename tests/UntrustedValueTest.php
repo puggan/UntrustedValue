@@ -127,4 +127,38 @@ final class UntrustedValueTest extends TestCase
 
         self::assertSame('string', self::wrongTypeFrom($strict->int(...))->givenType);
     }
+
+    public function testUnwrapsAnUntrustedValue(): void
+    {
+        $inner = new UntrustedValue(['a' => 1], 'inner.path');
+        $outer = new UntrustedValue($inner, 'outer.path');
+
+        self::assertSame(['a' => 1], $outer->value);
+        self::assertSame('outer.path', $outer->path);
+    }
+
+    public function testUnwrapsAcrossClasses(): void
+    {
+        $strict = new UntrustedStrictValue(new UntrustedValue('42'));
+
+        self::assertSame('42', $strict->value);
+        self::assertSame('string', self::wrongTypeFrom($strict->int(...))->givenType);
+    }
+
+    public function testUnwrapsNestedLayers(): void
+    {
+        self::assertSame(7, new UntrustedValue(new UntrustedValue(new UntrustedStrictValue(7)))->value);
+    }
+
+    public function testItemsOfAWrappedIteratorAreNotWrappedTwice(): void
+    {
+        $generator = (static function (): \Generator {
+            yield 'a' => new UntrustedValue(1, 'somewhere.else');
+        })();
+
+        foreach (new UntrustedValue($generator, 'list') as $key => $item) {
+            self::assertSame(1, $item->value);
+            self::assertSame('list.a', $item->path);
+        }
+    }
 }

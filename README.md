@@ -91,6 +91,9 @@ widens an int). Both share everything else through `AbstractUntrustedValue`, and
 
 Values read from a strict value, with `property()`, `list()` and the like, are strict too.
 
+Constructing from an untrusted value takes its raw value, so a value is never wrapped twice:
+`new UntrustedStrictValue($loose, 'path')` is a strict value holding `$loose`'s raw value.
+
 ## Methods
 
 Most methods take `bool $nullable = true`: null is accepted, and passes through, unless it is

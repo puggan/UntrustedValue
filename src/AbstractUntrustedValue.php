@@ -16,13 +16,29 @@ namespace Puggan\UntrustedValue;
 abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerializable
 {
     /**
-     * @param TValue $value The raw value from the untrusted source.
+     * The raw value from the untrusted source.
+     *
+     * @var TValue
+     */
+    public readonly mixed $value;
+
+    /**
+     * Wraps $value. When $value already is an untrusted value, its raw value is taken instead, so a
+     * value is never wrapped twice; the path is still the one given here, and the class is the one
+     * constructed, so new UntrustedStrictValue($loose) makes a strict value.
+     *
+     * $value is not a promoted property, as a promoted readonly property is assigned before the
+     * constructor body could unwrap it.
+     *
+     * @param TValue|AbstractUntrustedValue<TValue> $value The raw value from the untrusted source.
      * @param string $path Where in the input the value was found, e.g. "user.age". Empty for the root.
      */
     final public function __construct(
-        public readonly mixed $value,
+        mixed $value,
         public readonly string $path = '',
-    ) {}
+    ) {
+        $this->value = $value instanceof self ? $value->value : $value;
+    }
 
     /**
      * Decodes a JSON string into a new value of the called class. JSON objects become \stdClass
@@ -1481,6 +1497,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      * Whether the value is a string. PHPStan narrows this object's TValue to match either way.
      *
      * @phpstan-assert-if-true static<string&TValue> $this
+     * @phpstan-assert-if-true string $this->value
      * @phpstan-assert-if-false static<(int|float|bool|array|object|resource|null)&TValue> $this
      */
     private function valueIsString(): bool
