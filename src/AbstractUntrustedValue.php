@@ -684,6 +684,58 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * A new object of the same class and path holding $to, when the value is identical (===) to
+     * $from, otherwise this object.
+     *
+     * @template TTo
+     *
+     * @param TTo $to
+     *
+     * @return static<TValue|TTo>
+     */
+    public function replace(mixed $from, mixed $to): static
+    {
+        if ($this->value !== $from && $this->keepsTValue()) {
+            return $this;
+        }
+
+        return new static($to, $this->path);
+    }
+
+    /**
+     * Replaces null with $defaultValue, as replace(null, $defaultValue) does.
+     *
+     * @template TDefault
+     *
+     * @param TDefault $defaultValue
+     *
+     * @return static<((int|float|string|bool|array<mixed>|object|resource)&TValue)|TDefault>
+     */
+    public function default(mixed $defaultValue): static
+    {
+        if ($this->valueIsNotNull()) {
+            return $this;
+        }
+
+        return new static($defaultValue, $this->path);
+    }
+
+    /**
+     * Replaces an empty string with $defaultValue, as replace('', $defaultValue) does. A string of
+     * only whitespace is not empty; use trim() first for that.
+     *
+     * @template TDefault
+     *
+     * @param TDefault $defaultValue
+     *
+     * @return static<TValue|TDefault>
+     */
+    public function blankDefault(mixed $defaultValue = null): static
+    {
+        return $this->replace('', $defaultValue);
+    }
+
+    /**
      * This object, when the value is not below $min and not above $max. A null bound is not
      * checked, and a null value passes. The comparison is PHP's < and >, so the value's type is not
      * checked here; convert it first, e.g. with asInt().
@@ -1257,6 +1309,27 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     private function valueIsString(): bool
     {
         return is_string($this->value);
+    }
+
+    /**
+     * Whether the value is not null. When it is not, PHPStan narrows this object's TValue to match.
+     *
+     * @phpstan-assert-if-true static<(int|float|string|bool|array<mixed>|object|resource)&TValue> $this
+     */
+    private function valueIsNotNull(): bool
+    {
+        return $this->value !== null;
+    }
+
+    /**
+     * Always true. PHPStan only lets $this widen to a static<TValue|TOther> return type after an
+     * assertion has typed it as static<TValue>, so replace() checks this before returning $this.
+     *
+     * @phpstan-assert-if-true static<TValue> $this
+     */
+    private function keepsTValue(): bool
+    {
+        return true;
     }
 
     /**
