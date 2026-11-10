@@ -10,7 +10,11 @@ from, so errors point at the exact field, like `tags.2`.
 composer require puggan/untrusted-value
 ```
 
-Requires PHP 8.5 or later, with ext-mbstring.
+Requires PHP 8.1 or later, with ext-mbstring.
+
+PHP 8.1 is the floor because the wrapped value and its path are `readonly` promoted constructor
+properties, which PHP 8.1 introduced. The test suite passes on PHP 8.1 through 8.5, and on the
+8.6 release candidate.
 
 ## Example
 
@@ -109,6 +113,8 @@ change, and keep the path otherwise. The wrapped type is tracked as a PHPStan te
 `UntrustedValue<TValue>`, and narrowed along the chain where possible.
 
 ## Development
+
+The tests and development tools need PHP 8.4 or later; the tests use its `new Foo()->bar()` syntax.
 
 ```bash
 composer test     # PHPUnit
