@@ -523,6 +523,107 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * This object, when isArray() with the same $nullable is true.
+     *
+     * @return ($nullable is false ? static<array<mixed>&TValue> : static<(array<mixed>|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not an array, or is null when not allowed.
+     */
+    public function requireArray(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('array');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsArray()) {
+            return $this;
+        }
+
+        throw $this->wrongType('array');
+    }
+
+    /**
+     * This object, when isObject() with the same $nullable is true.
+     *
+     * @return ($nullable is false ? static<object&TValue> : static<(object|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not an object, or is null when not allowed.
+     */
+    public function requireObject(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('object');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsObject()) {
+            return $this;
+        }
+
+        throw $this->wrongType('object');
+    }
+
+    /**
+     * This object, when isList() with the same $nullable is true.
+     *
+     * @return ($nullable is false ? static<list<mixed>&TValue> : static<(list<mixed>|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not a list, or is null when not allowed.
+     */
+    public function requireList(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('list');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsList()) {
+            return $this;
+        }
+
+        throw $this->wrongType('list', is_array($this->value) ? 'map' : null);
+    }
+
+    /**
+     * This object, when isMap() with the same $nullable is true. PHPStan has no type for an array
+     * that is not a list, so TValue is only narrowed to its array part.
+     *
+     * @return ($nullable is false ? static<array<mixed>&TValue> : static<(array<mixed>|null)&TValue>)
+     *
+     * @throws WrongTypeException When the value is not a map, or is null when not allowed.
+     */
+    public function requireMap(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('map');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsList()) {
+            throw $this->wrongType('map', 'list');
+        }
+
+        if ($this->valueIsArray()) {
+            return $this;
+        }
+
+        throw $this->wrongType('map');
+    }
+
+    /**
      * Whether the value can have named properties: an object, or an array that is not a list.
      * An empty array is a list, so it does not count. Null passes when $nullable.
      */
