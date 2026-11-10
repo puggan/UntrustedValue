@@ -24,4 +24,7 @@ function typedCollectionType(UntrustedValue $value): void
     assertType('list<bool|float|int|string|null>', $value->listScalar());
     assertType('array<bool|float|int|string>', $value->arrayScalar(false));
     assertType('Generator<mixed, bool|float|int|string, mixed, void>', $value->yieldScalar(false));
+    assertType('list<bool|null>', $value->listBool());
+    assertType('array<bool>', $value->arrayBool(false));
+    assertType('Generator<mixed, bool, mixed, void>', $value->yieldBool(false));
 }

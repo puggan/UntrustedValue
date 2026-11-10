@@ -109,7 +109,7 @@ Most methods take `bool $nullable = true`: null is accepted, and passes through,
 | Change | `trim()`, `replace()`, `default()`, `blankDefault()`, `split()`, `csv()` |
 | Read nested values | `property()`, `list()`, `array()`, `yieldList()`, `yieldArray()`, or `foreach` directly |
 | Filter and map nested values | `filter()` and `map()`, chainable; `listMap()`, `arrayMap()`, `yieldMap()`, `yieldFlatMap()`, and `listRawMap()`, `arrayRawMap()`, `yieldRawMap()` without wrapping |
-| Typed collections | `listInt()`, `arrayInt()`, `yieldInt()`, and the same for `Float`, `String` and `Scalar` |
+| Typed collections | `listInt()`, `arrayInt()`, `yieldInt()`, and the same for `Float`, `String`, `Bool` and `Scalar` |
 
 The require, convert, validate and change methods return the same object when there is nothing to
 change, and keep the path otherwise. The wrapped type is tracked as a PHPStan template,

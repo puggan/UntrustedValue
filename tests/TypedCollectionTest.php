@@ -93,4 +93,16 @@ final class TypedCollectionTest extends TestCase
             }
         }
     }
+
+    public function testBoolCollections(): void
+    {
+        $flags = UntrustedValue::fromJson('{"a":"yes","b":0,"c":null}');
+
+        self::assertSame([true, false, null], $flags->listBool());
+        self::assertSame(['a' => true, 'b' => false, 'c' => null], $flags->arrayBool());
+        self::assertSame(['a' => true, 'b' => false, 'c' => null], iterator_to_array($flags->yieldBool()));
+
+        $this->expectException(WrongTypeException::class);
+        $flags->listBool(false);
+    }
 }

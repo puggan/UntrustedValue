@@ -764,6 +764,45 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * Each item, with its key, as a bool from bool() with the same $nullable, like yieldArray().
+     * A null value has no items, so it throws. Items are converted during iteration.
+     *
+     * @return ($nullable is false ? \Generator<mixed, bool, mixed, void> : \Generator<mixed, bool|null, mixed, void>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object.
+     */
+    public function yieldBool(bool $nullable = true): \Generator
+    {
+        return $this->yieldRawMap(static fn(self $item): ?bool => $item->bool($nullable), false);
+    }
+
+    /**
+     * Each item as a bool from bool() with the same $nullable, in a list like list(). A null value
+     * has no items, so it throws.
+     *
+     * @return ($nullable is false ? list<bool> : list<bool|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function listBool(bool $nullable = true): array
+    {
+        return $this->listRawMap(static fn(self $item): ?bool => $item->bool($nullable), false);
+    }
+
+    /**
+     * Each item as a bool from bool() with the same $nullable, with the same keys like array().
+     * A null value has no items, so it throws.
+     *
+     * @return ($nullable is false ? array<array-key, bool> : array<array-key, bool|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function arrayBool(bool $nullable = true): array
+    {
+        return $this->arrayRawMap(static fn(self $item): ?bool => $item->bool($nullable), false);
+    }
+
+    /**
      * Whether the value has the property: a public property of an object, or a key of an array.
      * Other values have no properties, so it is false for them.
      */
