@@ -381,6 +381,38 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * This object, when string() of the value is between $min and $max characters long, both
+     * inclusive. A null $max means no upper limit. Characters are counted with mb_strlen(), so
+     * "Thorbjörn" is 9 long, not 10. In UntrustedValue an int like 700 is measured as "700".
+     * Null has no length to check, so it passes.
+     *
+     * @return $this
+     *
+     * @throws WrongTypeException When string() can't return a string or null.
+     * @throws InvalidTypeException When the string is shorter than $min or longer than $max.
+     */
+    public function length(?int $max = null, int $min = 0): static
+    {
+        $string = $this->string();
+
+        if ($string === null) {
+            return $this;
+        }
+
+        $length = mb_strlen($string);
+
+        if ($length < $min) {
+            throw $this->invalid('minLength', sprintf('at least %d characters', $min));
+        }
+
+        if ($max !== null && $length > $max) {
+            throw $this->invalid('maxLength', sprintf('at most %d characters', $max));
+        }
+
+        return $this;
+    }
+
+    /**
      * This object, when string() of the value matches $regexp (see preg_match()). So in
      * UntrustedValue an int like 700 is checked as "700", while UntrustedStrictValue requires a
      * string. Null is rejected.
