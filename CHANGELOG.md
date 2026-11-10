@@ -4,7 +4,7 @@ All notable changes to this project. The format follows [Keep a Changelog](https
 and the project uses [semantic versioning](https://semver.org/); before 1.0, a minor version can
 change behaviour.
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-11-10
 
 ### Added
 
@@ -70,6 +70,6 @@ The first release.
   JSON.
 - A PHPStan template, `UntrustedValue<TValue>`, narrowed along the chain.
 
-[0.2.0]: https://github.com/puggan/UntrustedValue/compare/v0.1.1...main
+[0.2.0]: https://github.com/puggan/UntrustedValue/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/puggan/UntrustedValue/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/puggan/UntrustedValue/releases/tag/v0.1.0
