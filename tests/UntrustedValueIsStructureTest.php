@@ -11,37 +11,39 @@ use Puggan\UntrustedValue\UntrustedValue;
 final class UntrustedValueIsStructureTest extends TestCase
 {
     /**
-     * Value, then the expected isObject(), isArray(), isList() and hasProperties().
+     * Value, then the expected isObject(), isArray(), isList(), isMap() and hasProperties().
      *
-     * @return iterable<string, array{mixed, bool, bool, bool, bool}>
+     * @return iterable<string, array{mixed, bool, bool, bool, bool, bool}>
      */
     public static function values(): iterable
     {
-        yield 'stdClass' => [new \stdClass(), true, false, false, true];
-        yield 'object from json' => [UntrustedValue::fromJson('{"a":1}')->value, true, false, false, true];
-        yield 'empty array' => [[], false, true, true, false];
-        yield 'list' => [[1, 2, 3], false, true, true, false];
-        yield 'map' => [['a' => 1], false, true, false, true];
-        yield 'list out of order' => [[1 => 'b', 0 => 'a'], false, true, false, true];
-        yield 'list with gap' => [[0 => 'a', 2 => 'c'], false, true, false, true];
-        yield 'int' => [42, false, false, false, false];
-        yield 'string' => ['abc', false, false, false, false];
-        yield 'bool' => [true, false, false, false, false];
+        yield 'stdClass' => [new \stdClass(), true, false, false, false, true];
+        yield 'object from json' => [UntrustedValue::fromJson('{"a":1}')->value, true, false, false, false, true];
+        yield 'empty array' => [[], false, true, true, false, false];
+        yield 'list' => [[1, 2, 3], false, true, true, false, false];
+        yield 'map' => [['a' => 1], false, true, false, true, true];
+        yield 'list out of order' => [[1 => 'b', 0 => 'a'], false, true, false, true, true];
+        yield 'list with gap' => [[0 => 'a', 2 => 'c'], false, true, false, true, true];
+        yield 'int' => [42, false, false, false, false, false];
+        yield 'string' => ['abc', false, false, false, false, false];
+        yield 'bool' => [true, false, false, false, false, false];
     }
 
     #[DataProvider('values')]
-    public function testChecksTheStructure(mixed $value, bool $object, bool $array, bool $list, bool $properties): void
+    public function testChecksTheStructure(mixed $value, bool $object, bool $array, bool $list, bool $map, bool $properties): void
     {
         $untrusted = new UntrustedValue($value);
 
         self::assertSame($object, $untrusted->isObject());
         self::assertSame($array, $untrusted->isArray());
         self::assertSame($list, $untrusted->isList());
+        self::assertSame($map, $untrusted->isMap());
         self::assertSame($properties, $untrusted->hasProperties());
 
         self::assertSame($object, $untrusted->isObject(nullable: false));
         self::assertSame($array, $untrusted->isArray(nullable: false));
         self::assertSame($list, $untrusted->isList(nullable: false));
+        self::assertSame($map, $untrusted->isMap(nullable: false));
         self::assertSame($properties, $untrusted->hasProperties(nullable: false));
     }
 
@@ -52,6 +54,7 @@ final class UntrustedValueIsStructureTest extends TestCase
         self::assertTrue($null->isObject());
         self::assertTrue($null->isArray());
         self::assertTrue($null->isList());
+        self::assertTrue($null->isMap());
         self::assertTrue($null->hasProperties());
     }
 
@@ -62,6 +65,7 @@ final class UntrustedValueIsStructureTest extends TestCase
         self::assertFalse($null->isObject(nullable: false));
         self::assertFalse($null->isArray(nullable: false));
         self::assertFalse($null->isList(nullable: false));
+        self::assertFalse($null->isMap(nullable: false));
         self::assertFalse($null->hasProperties(nullable: false));
     }
 }

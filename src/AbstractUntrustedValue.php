@@ -506,6 +506,23 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
         return array_is_list($this->value);
     }
     /**
+     * Whether the value is a map: an array that is not a list. An empty array is a list, so it is
+     * not a map. Null passes when $nullable.
+     */
+    public function isMap(bool $nullable = true): bool
+    {
+        if ($this->value === null) {
+            return $nullable;
+        }
+
+        if (!is_array($this->value)) {
+            return false;
+        }
+
+        return !array_is_list($this->value);
+    }
+
+    /**
      * Whether the value can have named properties: an object, or an array that is not a list.
      * An empty array is a list, so it does not count. Null passes when $nullable.
      */
