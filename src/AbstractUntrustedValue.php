@@ -1074,6 +1074,39 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * This object, when the value is identical (===) to one of $allowed. The value is not converted
+     * first, so in UntrustedValue "1" does not match 1; convert it first, e.g. ->asInt()->oneOf().
+     * Null has nothing to check, so it passes. TValue narrows to the type of the allowed values;
+     * PHPStan widens literals like 'asc' to string for a method template.
+     *
+     * @template TAllowed
+     *
+     * @param array<array-key, TAllowed> $allowed
+     *
+     * @return static<(TAllowed&TValue)|(null&TValue)>
+     *
+     * @throws InvalidTypeException When the value is not one of $allowed.
+     */
+    public function oneOf(array $allowed): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        if ($this->valueIsOneOf($allowed)) {
+            return $this;
+        }
+
+        throw $this->invalid('oneOf', sprintf(
+            'one of %s',
+            implode(', ', array_map(
+                static fn(mixed $option): string => is_scalar($option) ? var_export($option, true) : get_debug_type($option),
+                $allowed,
+            )),
+        ));
+    }
+
+    /**
      * This object, when string() of the value matches $regexp (see preg_match()). So in
      * UntrustedValue an int like 700 is checked as "700", while UntrustedStrictValue requires a
      * string. Null is rejected.
@@ -1708,6 +1741,21 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
             $filter,
             $this->path,
         );
+    }
+
+    /**
+     * Whether the value is identical to one of $allowed. When it is, PHPStan narrows this object's
+     * TValue to match.
+     *
+     * @template TAllowed
+     *
+     * @param array<array-key, TAllowed> $allowed
+     *
+     * @phpstan-assert-if-true static<TAllowed&TValue> $this
+     */
+    private function valueIsOneOf(array $allowed): bool
+    {
+        return in_array($this->value, $allowed, true);
     }
 
     /**
