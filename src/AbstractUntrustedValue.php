@@ -305,6 +305,34 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * The value with whitespace trimmed from both ends, as trim() does. Returns this object when
+     * the value is not a string or has nothing to trim, otherwise a new object of the same class
+     * and path.
+     *
+     * A string TValue becomes plain string, as trimming can change it, e.g. to an empty string.
+     *
+     * @return static<(
+     *     TValue is int|float|bool|array|object|resource|null
+     *     ? TValue
+     *     : ((int|float|bool|array|object|resource|null)&TValue)|string
+     * )>
+     */
+    public function trim(): static
+    {
+        if (!$this->valueIsString()) {
+            return $this;
+        }
+
+        $trimmed = trim($this->value);
+
+        if ($trimmed === $this->value) {
+            return $this;
+        }
+
+        return new static($trimmed, $this->path);
+    }
+
+    /**
      * Returns the raw value, unchanged and unchecked.
      *
      * @return TValue
@@ -437,6 +465,17 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     {
         return $this->value;
     }
+    /**
+     * Whether the value is a string. PHPStan narrows this object's TValue to match either way.
+     *
+     * @phpstan-assert-if-true static<string&TValue> $this
+     * @phpstan-assert-if-false static<(int|float|bool|array|object|resource|null)&TValue> $this
+     */
+    private function valueIsString(): bool
+    {
+        return is_string($this->value);
+    }
+
     /**
      * Whether the value is null. When it is, PHPStan narrows this object's TValue to match.
      *
