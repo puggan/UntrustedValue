@@ -470,6 +470,162 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Each item, with its key, as an int from int() with the same $nullable, like yieldArray().
+     * A null value has no items, so it throws. Items are converted during iteration.
+     *
+     * @return ($nullable is false ? \Generator<mixed, int, mixed, void> : \Generator<mixed, int|null, mixed, void>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object.
+     */
+    public function yieldInt(bool $nullable = true): \Generator
+    {
+        return $this->yieldRawMap(static fn(self $item): ?int => $item->int($nullable), false);
+    }
+
+    /**
+     * Each item as an int from int() with the same $nullable, in a list like list(). A null
+     * value has no items, so it throws.
+     *
+     * @return ($nullable is false ? list<int> : list<int|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function listInt(bool $nullable = true): array
+    {
+        return $this->listRawMap(static fn(self $item): ?int => $item->int($nullable), false);
+    }
+
+    /**
+     * Each item as an int from int() with the same $nullable, with the same keys like array().
+     * A null value has no items, so it throws.
+     *
+     * @return ($nullable is false ? array<array-key, int> : array<array-key, int|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function arrayInt(bool $nullable = true): array
+    {
+        return $this->arrayRawMap(static fn(self $item): ?int => $item->int($nullable), false);
+    }
+
+    /**
+     * Each item, with its key, as a float from float() with the same $nullable, like yieldArray().
+     * A null value has no items, so it throws. Items are converted during iteration.
+     *
+     * @return ($nullable is false ? \Generator<mixed, float, mixed, void> : \Generator<mixed, float|null, mixed, void>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object.
+     */
+    public function yieldFloat(bool $nullable = true): \Generator
+    {
+        return $this->yieldRawMap(static fn(self $item): ?float => $item->float($nullable), false);
+    }
+
+    /**
+     * Each item as a float from float() with the same $nullable, in a list like list(). A null
+     * value has no items, so it throws.
+     *
+     * @return ($nullable is false ? list<float> : list<float|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function listFloat(bool $nullable = true): array
+    {
+        return $this->listRawMap(static fn(self $item): ?float => $item->float($nullable), false);
+    }
+
+    /**
+     * Each item as a float from float() with the same $nullable, with the same keys like array().
+     * A null value has no items, so it throws.
+     *
+     * @return ($nullable is false ? array<array-key, float> : array<array-key, float|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function arrayFloat(bool $nullable = true): array
+    {
+        return $this->arrayRawMap(static fn(self $item): ?float => $item->float($nullable), false);
+    }
+
+    /**
+     * Each item, with its key, as a string from string() with the same $nullable, like yieldArray().
+     * A null value has no items, so it throws. Items are converted during iteration.
+     *
+     * @return ($nullable is false ? \Generator<mixed, string, mixed, void> : \Generator<mixed, string|null, mixed, void>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object.
+     */
+    public function yieldString(bool $nullable = true): \Generator
+    {
+        return $this->yieldRawMap(static fn(self $item): ?string => $item->string($nullable), false);
+    }
+
+    /**
+     * Each item as a string from string() with the same $nullable, in a list like list(). A null
+     * value has no items, so it throws.
+     *
+     * @return ($nullable is false ? list<string> : list<string|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function listString(bool $nullable = true): array
+    {
+        return $this->listRawMap(static fn(self $item): ?string => $item->string($nullable), false);
+    }
+
+    /**
+     * Each item as a string from string() with the same $nullable, with the same keys like array().
+     * A null value has no items, so it throws.
+     *
+     * @return ($nullable is false ? array<array-key, string> : array<array-key, string|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function arrayString(bool $nullable = true): array
+    {
+        return $this->arrayRawMap(static fn(self $item): ?string => $item->string($nullable), false);
+    }
+
+    /**
+     * Each item, with its key, as a scalar from requireScalar() with the same $nullable, like yieldArray().
+     * A null value has no items, so it throws. Items are converted during iteration.
+     *
+     * @return ($nullable is false ? \Generator<mixed, scalar, mixed, void> : \Generator<mixed, scalar|null, mixed, void>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object.
+     */
+    public function yieldScalar(bool $nullable = true): \Generator
+    {
+        return $this->yieldRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
+    }
+
+    /**
+     * Each item as a scalar from requireScalar() with the same $nullable, in a list like list(). A null
+     * value has no items, so it throws.
+     *
+     * @return ($nullable is false ? list<scalar> : list<scalar|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function listScalar(bool $nullable = true): array
+    {
+        return $this->listRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
+    }
+
+    /**
+     * Each item as a scalar from requireScalar() with the same $nullable, with the same keys like array().
+     * A null value has no items, so it throws.
+     *
+     * @return ($nullable is false ? array<array-key, scalar> : array<array-key, scalar|null>)
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     */
+    public function arrayScalar(bool $nullable = true): array
+    {
+        return $this->arrayRawMap(static fn(self $item): int|float|string|bool|null => $item->requireScalar($nullable)->value, false);
+    }
+
+    /**
      * Whether the value has the property: a public property of an object, or a key of an array.
      * Other values have no properties, so it is false for them.
      */
