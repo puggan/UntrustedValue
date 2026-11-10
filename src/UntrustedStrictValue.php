@@ -55,6 +55,18 @@ final class UntrustedStrictValue extends AbstractUntrustedValue
     }
 
     /**
+     * The value, when it is a bool, wrapped as a new UntrustedStrictValue with the same path.
+     *
+     * @return ($nullable is false ? UntrustedStrictValue<bool&TValue> : UntrustedStrictValue<(bool|null)&TValue>)
+     *
+     * @throws WrongTypeException When bool() throws.
+     */
+    public function asBool(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->bool(nullable: $nullable), $this->path);
+    }
+
+    /**
      * Returns the value as an int. Only an int is accepted.
      *
      * @return ($nullable is false ? int&TValue : (int|null)&TValue)
@@ -136,6 +148,31 @@ final class UntrustedStrictValue extends AbstractUntrustedValue
 
         if (!is_string($this->value)) {
             throw $this->wrongType('string');
+        }
+
+        return $this->value;
+    }
+
+    /**
+     * Returns the value as a bool. Only a bool is accepted.
+     *
+     * @return ($nullable is false ? bool&TValue : (bool|null)&TValue)
+     *
+     * @throws WrongTypeException When the value is not a bool, or null when allowed.
+     */
+    public function bool(bool $nullable = true): ?bool
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('bool');
+            }
+
+            // The value itself rather than null, so PHPStan sees it is part of TValue.
+            return $this->value;
+        }
+
+        if (!is_bool($this->value)) {
+            throw $this->wrongType('bool');
         }
 
         return $this->value;

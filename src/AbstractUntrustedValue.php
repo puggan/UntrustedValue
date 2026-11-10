@@ -110,6 +110,21 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     abstract public function string(bool $nullable = true): ?string;
 
     /**
+     * Returns the value as a bool. See UntrustedValue and UntrustedStrictValue for what is accepted.
+     *
+     * The return type is UntrustedValue's, which covers UntrustedStrictValue's narrower one too.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? (TValue is bool ? TValue : bool)
+     *     : (TValue is bool|null ? TValue : (TValue is scalar|array|object|resource ? bool : bool|null))
+     * )
+     *
+     * @throws WrongTypeException When the value can't be returned as a bool, or is null when not allowed.
+     */
+    abstract public function bool(bool $nullable = true): ?bool;
+
+    /**
      * This value as an UntrustedStrictValue, where int(), float() and string() only accept the
      * exact type. Returns the same object when it already is one, otherwise a copy with the same
      * value and path.
@@ -174,6 +189,20 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      * @throws WrongTypeException When string() throws.
      */
     abstract public function asString(bool $nullable = true): UntrustedStrictValue;
+
+    /**
+     * The value converted by bool(), wrapped as an UntrustedStrictValue with the same path. The
+     * wrapped type follows bool()'s return type, which UntrustedStrictValue narrows further.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? UntrustedStrictValue<(TValue is bool ? TValue : bool)>
+     *     : UntrustedStrictValue<(TValue is bool|null ? TValue : (TValue is scalar|array|object|resource ? bool : bool|null))>
+     * )
+     *
+     * @throws WrongTypeException When bool() throws.
+     */
+    abstract public function asBool(bool $nullable = true): UntrustedStrictValue;
 
     /**
      * The value as a list, an array with keys 0, 1, 2, … in order: this object when it already is
@@ -1087,6 +1116,20 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
             return false;
         }
     }
+    /**
+     * Whether bool() with the same $nullable would return a bool instead of throwing.
+     */
+    public function isBool(bool $nullable = true): bool
+    {
+        try {
+            $this->bool($nullable);
+
+            return true;
+        } catch (WrongTypeException) {
+            return false;
+        }
+    }
+
     /**
      * Whether the value is null.
      */

@@ -63,6 +63,22 @@ final class UntrustedValue extends AbstractUntrustedValue
     }
 
     /**
+     * The value converted by bool(), wrapped as an UntrustedStrictValue with the same path.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? UntrustedStrictValue<(TValue is bool ? TValue : bool)>
+     *     : UntrustedStrictValue<(TValue is bool|null ? TValue : (TValue is scalar|array|object|resource ? bool : bool|null))>
+     * )
+     *
+     * @throws WrongTypeException When bool() throws.
+     */
+    public function asBool(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->bool(nullable: $nullable), $this->path);
+    }
+
+    /**
      * Returns the value as an int.
      *
      * Besides an int, these are converted too:
@@ -219,6 +235,58 @@ final class UntrustedValue extends AbstractUntrustedValue
 
         return (string) $this->value;
     }
+    /**
+     * Returns the value as a bool.
+     *
+     * Besides a bool, these are converted too: the ints 1 and 0, and the strings "1", "true",
+     * "yes" and "on" or "0", "false", "no" and "off", in any case, as checkboxes and query strings
+     * send them.
+     *
+     * The return type follows TValue where it can: a TValue that is already a bool (or ?bool when
+     * nullable) is returned as is, and otherwise the result is bool, or ?bool when null is both
+     * allowed and possible.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? (TValue is bool ? TValue : bool)
+     *     : (TValue is bool|null ? TValue : (TValue is scalar|array|object|resource ? bool : bool|null))
+     * )
+     *
+     * @throws WrongTypeException When the value is not a bool, or null when allowed, and cannot be converted.
+     */
+    public function bool(bool $nullable = true): ?bool
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('bool');
+            }
+
+            return null;
+        }
+
+        if (is_bool($this->value)) {
+            return $this->value;
+        }
+
+        if (is_int($this->value)) {
+            return match ($this->value) {
+                1 => true,
+                0 => false,
+                default => throw $this->wrongType('bool', 'non-boolean-int'),
+            };
+        }
+
+        if (!is_string($this->value)) {
+            throw $this->wrongType('bool');
+        }
+
+        return match (strtolower($this->value)) {
+            '1', 'true', 'yes', 'on' => true,
+            '0', 'false', 'no', 'off' => false,
+            default => throw $this->wrongType('bool', 'non-boolean-string'),
+        };
+    }
+
     /**
      * The float as an int, when it is within 0.001 above a whole number that fits in an int.
      * The float is either the value itself, or a numeric string value read as a number.
