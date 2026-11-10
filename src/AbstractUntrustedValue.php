@@ -1195,6 +1195,43 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * The value as a date, parsed with DateTimeImmutable::createFromFormat() in $format. The value
+     * is read with string(), so UntrustedStrictValue requires a string. Unlike createFromFormat()
+     * itself, a date that only parses by rolling over, like 2026-02-30 becoming 2026-03-02, is
+     * rejected, as is anything else PHP warns about.
+     *
+     * Fields the format leaves out are taken from the current time, as createFromFormat() does;
+     * start the format with "!" to reset them instead, like "!Y-m-d" for midnight.
+     *
+     * @return ($nullable is false ? \DateTimeImmutable : \DateTimeImmutable|null)
+     *
+     * @throws WrongTypeException When string() can't return a string, or the value is null when not allowed.
+     * @throws InvalidTypeException When the string is not a valid date in $format.
+     */
+    public function date(string $format, bool $nullable = true, ?\DateTimeZone $timezone = null): ?\DateTimeImmutable
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType('date');
+            }
+
+            return null;
+        }
+
+        $date = \DateTimeImmutable::createFromFormat($format, $this->string(false), $timezone);
+        $errors = \DateTimeImmutable::getLastErrors();
+
+        // PHP 8.2+ returns false when there is nothing to report, 8.1 an array of zero counts.
+        $failed = $errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0);
+
+        if ($date === false || $failed) {
+            throw $this->invalid('date', sprintf('a date in the format %s', $format));
+        }
+
+        return $date;
+    }
+
+    /**
      * Whether int() with the same $nullable would return an int instead of throwing.
      */
     public function isInt(bool $nullable = true): bool

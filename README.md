@@ -101,7 +101,7 @@ Most methods take `bool $nullable = true`: null is accepted, and passes through,
 
 | Kind | Methods |
 |---|---|
-| Get a plain value | `int()`, `float()`, `string()`, `bool()`, `enum()`, `raw()` |
+| Get a plain value | `int()`, `float()`, `string()`, `bool()`, `enum()`, `date()`, `raw()` |
 | Check | `isInt()`, `isFloat()`, `isString()`, `isBool()`, `isNull()`, `isScalar()`, `isIterable()`, `isArray()`, `isObject()`, `isList()`, `isMap()`, `hasProperty()`, `hasProperties()` |
 | Require, else throw | `requireNull()`, `requireScalar()`, `requireArray()`, `requireObject()`, `requireList()`, `requireMap()`, `requireProperty()` |
 | Convert | `asInt()`, `asFloat()`, `asString()`, `asBool()`, `asList()`, `asArray()`, `asObject()`, `asStrict()`, `asLoose()` |
