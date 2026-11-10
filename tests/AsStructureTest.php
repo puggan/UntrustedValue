@@ -193,6 +193,83 @@ final class AsStructureTest extends TestCase
         }
     }
 
+    /**
+     * @return iterable<string, array{\Traversable<mixed, mixed>, array<array-key, mixed>}>
+     */
+    public static function traversables(): iterable
+    {
+        yield 'generator' => [(static function (): \Generator {
+            yield 'a' => 1;
+            yield 'b' => 2;
+        })(), ['a' => 1, 'b' => 2]];
+        yield 'ArrayIterator' => [new \ArrayIterator([3 => 'x', 5 => 'y']), [3 => 'x', 5 => 'y']];
+        yield 'IteratorAggregate' => [new class implements \IteratorAggregate {
+            public string $notAnItem = 'property';
+
+            public function getIterator(): \Generator
+            {
+                yield 'first' => 'item';
+            }
+        }, ['first' => 'item']];
+    }
+
+    /**
+     * @param \Traversable<mixed, mixed> $traversable
+     * @param array<array-key, mixed> $expected
+     */
+    #[DataProvider('traversables')]
+    public function testAsListTakesTheItemsOfATraversable(\Traversable $traversable, array $expected): void
+    {
+        $list = new UntrustedStrictValue($traversable, 'items')->asList();
+
+        self::assertSame(array_values($expected), $list->value);
+        self::assertSame('items', $list->path);
+        self::assertSame(UntrustedStrictValue::class, $list::class);
+    }
+
+    /**
+     * @param \Traversable<mixed, mixed> $traversable
+     * @param array<array-key, mixed> $expected
+     */
+    #[DataProvider('traversables')]
+    public function testAsArrayTakesTheItemsOfATraversableWithKeys(\Traversable $traversable, array $expected): void
+    {
+        $array = new UntrustedValue($traversable, 'items')->asArray();
+
+        self::assertSame($expected, $array->value);
+        self::assertSame('items', $array->path);
+    }
+
+    public function testAsArrayKeepsTheLastItemForARepeatedKey(): void
+    {
+        $generator = (static function (): \Generator {
+            yield 'k' => 1;
+            yield 'k' => 2;
+        })();
+
+        self::assertSame(['k' => 2], new UntrustedValue($generator)->asArray()->value);
+    }
+
+    public function testAsArrayThrowsForKeysThatAreNotIntOrString(): void
+    {
+        $generator = (static function (): \Generator {
+            yield new \stdClass() => 'value';
+        })();
+
+        $exception = self::wrongTypeFrom(static fn() => new UntrustedValue($generator, 'items')->asArray());
+
+        self::assertSame('array-key', $exception->expectedType);
+        self::assertSame('stdClass', $exception->givenType);
+        self::assertSame('items', $exception->path);
+    }
+
+    public function testAsObjectKeepsATraversable(): void
+    {
+        $untrusted = new UntrustedValue(new \ArrayIterator([1]));
+
+        self::assertSame($untrusted, $untrusted->asObject());
+    }
+
     private static function wrongTypeFrom(callable $call): WrongTypeException
     {
         try {

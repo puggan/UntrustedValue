@@ -162,8 +162,9 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     /**
      * The value as a list, an array with keys 0, 1, 2, … in order: this object when it already is
      * one, or a new object of the same class and path holding the values of another array
-     * (array_values()) or the public property values of an object. An empty array is a list. Null
-     * returns this object too when $nullable.
+     * (array_values()), the items of a Traversable object (like an iterator or generator), or the
+     * public property values of another object. An empty array is a list. Null returns this object
+     * too when $nullable. A generator can only be iterated once, so converting one uses it up.
      *
      * @return (
      *     $nullable is false
@@ -191,6 +192,10 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
             return new static(array_values($this->value), $this->path);
         }
 
+        if ($this->value instanceof \Traversable) {
+            return new static(iterator_to_array($this->value, false), $this->path);
+        }
+
         if (is_object($this->value)) {
             return new static(array_values(get_object_vars($this->value)), $this->path);
         }
@@ -200,8 +205,9 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
 
     /**
      * The value as an array: this object when it already is one, or a new object of the same class
-     * and path holding an object's properties cast to an array. Null returns this object too when
-     * $nullable.
+     * and path holding the items of a Traversable object (like an iterator or generator) with their
+     * keys, or another object's properties cast to an array. Null returns this object too when
+     * $nullable. A generator can only be iterated once, so converting one uses it up.
      *
      * @return (
      *     $nullable is false
@@ -209,7 +215,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      *     : static<(TValue is array|scalar|null|resource ? array<mixed>&TValue : array<mixed>)|(null&TValue)>
      * )
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
+     * @throws WrongTypeException When the value is neither an array nor an object, is null when not allowed, or a Traversable yields a key that is not an int or string.
      */
     public function asArray(bool $nullable = true): static
     {
@@ -223,6 +229,10 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
 
         if ($this->valueIsArray()) {
             return $this;
+        }
+
+        if ($this->value instanceof \Traversable) {
+            return new static($this->traversableToArray($this->value), $this->path);
         }
 
         if (!is_object($this->value)) {
@@ -1294,6 +1304,31 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
             yield $key => new static($item, $this->childPath($name));
         }
     }
+    /**
+     * The items of $traversable with their keys. A later item with the same key replaces an earlier
+     * one. Unlike iterator_to_array(), a key that is not an int or string throws a
+     * WrongTypeException rather than a TypeError.
+     *
+     * @param \Traversable<mixed, mixed> $traversable
+     *
+     * @return array<array-key, mixed>
+     *
+     * @throws WrongTypeException When a key is not an int or string.
+     */
+    private function traversableToArray(\Traversable $traversable): array
+    {
+        $array = [];
+        foreach ($traversable as $key => $item) {
+            if (!is_int($key) && !is_string($key)) {
+                throw $this->wrongType('array-key', get_debug_type($key));
+            }
+
+            $array[$key] = $item;
+        }
+
+        return $array;
+    }
+
     /**
      * The public properties of an object value, or an array value itself, or null for other values.
      *
