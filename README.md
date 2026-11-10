@@ -104,7 +104,7 @@ Most methods take `bool $nullable = true`: null is accepted, and passes through,
 | Convert | `asInt()`, `asFloat()`, `asString()`, `asList()`, `asArray()`, `asObject()`, `asStrict()`, `asLoose()` |
 | Validate | `range()`, `length()`, `match()`, `notMatch()` |
 | Change | `trim()`, `replace()`, `default()`, `blankDefault()` |
-| Read nested values | `property()`, `list()`, `array()`, `yieldList()`, `yieldArray()` |
+| Read nested values | `property()`, `list()`, `array()`, `yieldList()`, `yieldArray()`, or `foreach` directly |
 | Map nested values | `listMap()`, `arrayMap()`, `yieldMap()`, and `listRawMap()`, `arrayRawMap()`, `yieldRawMap()` without wrapping |
 | Typed collections | `listInt()`, `arrayInt()`, `yieldInt()`, and the same for `Float`, `String` and `Scalar` |
 

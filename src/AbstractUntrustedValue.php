@@ -10,8 +10,10 @@ namespace Puggan\UntrustedValue;
  * UntrustedStrictValue only accepts the exact type.
  *
  * @template-covariant TValue The type of the raw value. Only describes what was wrapped, it is not checked.
+ *
+ * @implements \IteratorAggregate<mixed, AbstractUntrustedValue<mixed>>
  */
-abstract class AbstractUntrustedValue implements \JsonSerializable
+abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerializable
 {
     /**
      * @param TValue $value The raw value from the untrusted source.
@@ -358,6 +360,21 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
         }
 
         return $array;
+    }
+
+    /**
+     * Makes the value usable in foreach, giving what yieldArray() gives: each item with its key,
+     * as a new object of the same class whose path is this path plus the key. Null gives no items.
+     * PHP calls this when the foreach starts, so that is when a value that is neither an array nor
+     * an object throws.
+     *
+     * @return \Generator<mixed, static<mixed>, mixed, void>
+     *
+     * @throws WrongTypeException When the value is neither an array, an object nor null.
+     */
+    public function getIterator(): \Generator
+    {
+        return $this->yieldArray();
     }
 
     /**
