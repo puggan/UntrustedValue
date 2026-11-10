@@ -388,6 +388,26 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * A new object of the same class and path, holding a generator of the items of yieldArray()
+     * that $callback returns true for, with their raw values and original keys. Iterating it, or
+     * calling list(), listInt(), map() and the like on it, wraps each item again with the same path
+     * as before, so filter() can be chained. Use asList() on the result to number the items 0, 1, 2.
+     *
+     * The value is checked when this is called; $callback runs when the result is iterated, which
+     * can only happen once. Null gives no items.
+     *
+     * @param callable(static<mixed>, mixed): bool $callback
+     *
+     * @return static<\Generator<mixed, mixed, mixed, void>>
+     *
+     * @throws WrongTypeException When yieldArray() throws.
+     */
+    public function filter(callable $callback): static
+    {
+        return new static($this->filterItems($this->yieldArray(), $callback), $this->path);
+    }
+
+    /**
      * Like yieldArray(), but each item is passed to $mapper, with its key, and the result is
      * yielded instead. A result that is not an AbstractUntrustedValue is wrapped in a new object of
      * this class with the item's path. The value is checked when this is called; $mapper runs
@@ -1217,6 +1237,23 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     {
         foreach ($items as $key => $item) {
             yield $key => $this->mapItem($item, $key, $mapper);
+        }
+    }
+
+    /**
+     * The raw values of the items $callback returns true for, with their keys.
+     *
+     * @param \Generator<mixed, static<mixed>, mixed, void> $items
+     * @param callable(static<mixed>, mixed): bool $callback
+     *
+     * @return \Generator<mixed, mixed, mixed, void>
+     */
+    private function filterItems(\Generator $items, callable $callback): \Generator
+    {
+        foreach ($items as $key => $item) {
+            if ($callback($item, $key)) {
+                yield $key => $item->value;
+            }
         }
     }
 
