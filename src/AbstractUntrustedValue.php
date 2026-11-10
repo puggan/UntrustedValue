@@ -417,6 +417,59 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Like yieldMap(), but $mapper's results are yielded as they are, without wrapping.
+     *
+     * @template TResult
+     *
+     * @param callable(static<mixed>, mixed): TResult $mapper
+     *
+     * @return \Generator<mixed, TResult, mixed, void>
+     *
+     * @throws WrongTypeException When yieldArray() throws.
+     */
+    public function yieldRawMap(callable $mapper, bool $nullable = true): \Generator
+    {
+        return $this->mapRawItems($this->yieldArray($nullable), $mapper);
+    }
+
+    /**
+     * Like listMap(), but $mapper's results are returned as they are, without wrapping.
+     *
+     * @template TResult
+     *
+     * @param callable(static<mixed>, int): TResult $mapper
+     *
+     * @return list<TResult>
+     *
+     * @throws WrongTypeException When yieldList() throws.
+     */
+    public function listRawMap(callable $mapper, bool $nullable = true): array
+    {
+        return iterator_to_array($this->mapRawItems($this->yieldList($nullable), $mapper), false);
+    }
+
+    /**
+     * Like arrayMap(), but $mapper's results are returned as they are, without wrapping.
+     *
+     * @template TResult
+     *
+     * @param callable(static<mixed>, array-key): TResult $mapper
+     *
+     * @return array<array-key, TResult>
+     *
+     * @throws WrongTypeException When yieldArray() throws, or yields a key that is not an int or string.
+     */
+    public function arrayRawMap(callable $mapper, bool $nullable = true): array
+    {
+        $array = [];
+        foreach ($this->array($nullable) as $key => $item) {
+            $array[$key] = $mapper($item, $key);
+        }
+
+        return $array;
+    }
+
+    /**
      * Whether the value has the property: a public property of an object, or a key of an array.
      * Other values have no properties, so it is false for them.
      */
@@ -879,6 +932,22 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     {
         foreach ($items as $key => $item) {
             yield $key => $this->mapItem($item, $key, $mapper);
+        }
+    }
+
+    /**
+     * @template TKey
+     * @template TResult
+     *
+     * @param \Generator<TKey, static<mixed>, mixed, void> $items
+     * @param callable(static<mixed>, TKey): TResult $mapper
+     *
+     * @return \Generator<TKey, TResult, mixed, void>
+     */
+    private function mapRawItems(\Generator $items, callable $mapper): \Generator
+    {
+        foreach ($items as $key => $item) {
+            yield $key => $mapper($item, $key);
         }
     }
 
