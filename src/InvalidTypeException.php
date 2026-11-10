@@ -11,8 +11,8 @@ class InvalidTypeException extends UntrustedValueException
 {
     /**
      * @param string $message Human-readable description of the error.
-     * @param string $filter The filter the value failed, e.g. "email".
-     * @param string $path Where in the input the value was found, e.g. "user.email".
+     * @param string $filter The filter the value failed, e.g. "max", "required" or "match".
+     * @param string $path Where in the input the value was found, e.g. "user.age".
      */
     public function __construct(
         string $message,

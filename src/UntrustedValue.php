@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Puggan\UntrustedValue;
 
 /**
- * Wraps a value from an untrusted source. int(), float() and string() also convert compatible
- * values, like the string "42" to the int 42. See UntrustedStrictValue for exact types only.
+ * Wraps a value from an untrusted source. int(), float(), string() and bool() also convert
+ * compatible values, like the string "42" to the int 42. See UntrustedStrictValue for exact types
+ * only.
  *
  * @template-covariant TValue The type of the raw value. Only describes what was wrapped, it is not checked.
  *
@@ -97,7 +98,7 @@ final class UntrustedValue extends AbstractUntrustedValue
      *     : (TValue is int|null ? TValue : (TValue is scalar|array|object|resource ? int : int|null))
      * )
      *
-     * @throws WrongTypeException When the value is not an int, or null when allowed, and cannot be converted.
+     * @throws WrongTypeException When the value can't be converted to an int, or is null when not allowed.
      */
     public function int(bool $nullable = true): ?int
     {
@@ -149,7 +150,7 @@ final class UntrustedValue extends AbstractUntrustedValue
      *     : (TValue is float|null ? TValue : (TValue is scalar|array|object|resource ? float : float|null))
      * )
      *
-     * @throws WrongTypeException When the value is not a float, or null when allowed, and cannot be converted.
+     * @throws WrongTypeException When the value can't be converted to a float, or is null when not allowed.
      */
     public function float(bool $nullable = true): ?float
     {
@@ -205,7 +206,7 @@ final class UntrustedValue extends AbstractUntrustedValue
      *     : (TValue is string|null ? TValue : (TValue is scalar|array|object|resource ? string : string|null))
      * )
      *
-     * @throws WrongTypeException When the value is not a string, or null when allowed, and cannot be converted.
+     * @throws WrongTypeException When the value can't be converted to a string, or is null when not allowed.
      */
     public function string(bool $nullable = true): ?string
     {
@@ -252,7 +253,7 @@ final class UntrustedValue extends AbstractUntrustedValue
      *     : (TValue is bool|null ? TValue : (TValue is scalar|array|object|resource ? bool : bool|null))
      * )
      *
-     * @throws WrongTypeException When the value is not a bool, or null when allowed, and cannot be converted.
+     * @throws WrongTypeException When the value can't be converted to a bool, or is null when not allowed.
      */
     public function bool(bool $nullable = true): ?bool
     {

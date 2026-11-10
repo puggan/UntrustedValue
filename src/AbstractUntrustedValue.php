@@ -6,8 +6,8 @@ namespace Puggan\UntrustedValue;
 
 /**
  * Wraps a value from an untrusted source, and hands it back as a type-safe value. The subclasses
- * decide how strict int(), float() and string() are: UntrustedValue converts compatible values,
- * UntrustedStrictValue only accepts the exact type.
+ * decide how strict int(), float(), string(), bool() and the methods built on them are:
+ * UntrustedValue converts compatible values, UntrustedStrictValue only accepts the exact type.
  *
  * @template-covariant TValue The type of the raw value. Only describes what was wrapped, it is not checked.
  *
@@ -115,18 +115,18 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     abstract public function bool(bool $nullable = true): ?bool;
 
     /**
-     * This value as an UntrustedStrictValue, where int(), float() and string() only accept the
-     * exact type. Returns the same object when it already is one, otherwise a copy with the same
-     * value and path.
+     * This value as an UntrustedStrictValue, where int(), float(), string(), bool() and the methods
+     * built on them only accept the exact type. Returns the same object when it already is one,
+     * otherwise a copy with the same value and path.
      *
      * @return UntrustedStrictValue<TValue>
      */
     abstract public function asStrict(): UntrustedStrictValue;
 
     /**
-     * This value as an UntrustedValue, where int(), float() and string() also convert compatible
-     * values. Returns the same object when it already is one, otherwise a copy with the same value
-     * and path.
+     * This value as an UntrustedValue, where int(), float(), string(), bool() and the methods built
+     * on them also convert compatible values. Returns the same object when it already is one,
+     * otherwise a copy with the same value and path.
      *
      * @return UntrustedValue<TValue>
      */
@@ -424,13 +424,14 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
 
     /**
      * A new object of the same class and path, holding a generator of the items of yieldArray()
-     * that $callback returns true for, with their original keys. Iterating it, or calling list(),
-     * listInt(), map() and the like on it, gives those items again with their own paths, so
-     * filter() can be chained and errors still point into the original input. asList() on the
-     * result numbers the items 0, 1, 2.
+     * that $callback keeps. Calls $callback($item, $key) for each one: $item is the item, wrapped
+     * in this class with its own path, and $key its original key, which an iterator can make any
+     * type. An item is kept when $callback returns true; an exception it throws comes through.
      *
-     * The value is checked when this is called; $callback runs when the result is iterated, which
-     * can only happen once. Null gives no items.
+     * The result can be chained: iterating it, or calling list(), listInt(), map() and the like on
+     * it, gives the kept items with their own paths, so errors still point into the original input.
+     * asList() on the result numbers them 0, 1, 2. The value is checked when this is called;
+     * $callback runs when the result is iterated, which can only happen once. Null gives no items.
      *
      * @param callable(static<mixed>, mixed): bool $callback
      *
@@ -445,10 +446,14 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
 
     /**
      * Like filter(), but keeps the items $validator does not throw an UntrustedValueException for.
-     * The validator's return value is ignored, so it can be a void method that just checks, like
-     * fn($user) => $user->property('age')->asInt(false)->range(0, 150). The original item is kept,
-     * not what the validator returns. Other exceptions are not caught, so a bug in $validator or an
-     * invalid pattern given to match() still comes through.
+     * Calls $validator($item, $key) for each item of yieldArray(): $item is the item, wrapped in
+     * this class with its own path, and $key its original key, which an iterator can make any type.
+     * Its return value is ignored, so it can be a void method that just checks, like fn($user) =>
+     * $user->property('age')->asInt(false)->range(0, 150), and the original item is kept, not what
+     * it returns.
+     *
+     * Other exceptions are not caught, so a bug in $validator or an invalid pattern given to
+     * match() still comes through. The result chains and runs like filter()'s.
      *
      * @param callable(static<mixed>, mixed): mixed $validator
      *
@@ -471,13 +476,16 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
 
     /**
      * A new object of the same class and path, holding a generator of $mapper's result for each
-     * item of yieldArray(), with the original keys, as yieldMap() gives them. Like filter(), it can
-     * be chained: iterating the result, or calling list(), listInt(), filter() and the like on it,
-     * gives each result with its own path, so $item->property('age') keeps "users.1.age". A plain
-     * result gets its item's path. The class of the new object decides strictness from then on.
+     * item of yieldArray(), with the original keys. Calls $mapper($item, $key) for each one: $item
+     * is the item, wrapped in this class with its own path, and $key its original key, which an
+     * iterator can make any type. A plain result is wrapped with the item's path; an untrusted
+     * value, like $item->property('age'), keeps its own, so errors report "users.1.age". An
+     * exception $mapper throws comes through.
      *
-     * The value is checked when this is called; $mapper runs when the result is iterated, which can
-     * only happen once. Null gives no items.
+     * The result can be chained like filter()'s: iterating it, or calling list(), listInt(),
+     * filter() and the like on it, gives each result with its path, and the class of the new object
+     * decides strictness from then on. The value is checked when this is called; $mapper runs when
+     * the result is iterated, which can only happen once. Null gives no items.
      *
      * @template TResult
      *
@@ -493,10 +501,14 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Like yieldArray(), but each item is passed to $mapper, with its key, and the result is
-     * yielded instead. A result that is not an AbstractUntrustedValue is wrapped in a new object of
-     * this class with the item's path. The value is checked when this is called; $mapper runs
-     * during iteration.
+     * Yields $mapper's result for each item of yieldArray(), with the item's key. Calls
+     * $mapper($item, $key) for each one: $item is the item, wrapped in this class with its own
+     * path, and $key its original key, which an iterator can make any type. A plain result is
+     * wrapped in a new object of this class with the item's path; an untrusted value is yielded as
+     * it is.
+     *
+     * The value is checked when this is called; $mapper runs during iteration, and an exception it
+     * throws comes through then. Null gives no items when $nullable.
      *
      * @template TResult
      *
@@ -512,7 +524,11 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Like list(), but with each item passed to $mapper, with its index, as yieldMap() does.
+     * A list of $mapper's result for each item, numbered 0, 1, 2, …. Calls $mapper($item, $index)
+     * for each item of yieldList(): $item is the item, wrapped in this class with its own path, and
+     * $index its position, from 0. A plain result is wrapped in a new object of this class with the
+     * item's path; an untrusted value is kept as it is. An exception $mapper throws comes through.
+     * Null gives an empty list when $nullable.
      *
      * @template TResult
      *
@@ -528,7 +544,11 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Like array(), but with each item passed to $mapper, with its key, as yieldMap() does.
+     * An array of $mapper's result for each item, with the item's key. Calls $mapper($item, $key)
+     * for each item of array(): $item is the item, wrapped in this class with its own path, and
+     * $key its original key, an int or string. A plain result is wrapped in a new object of this
+     * class with the item's path; an untrusted value is kept as it is. An exception $mapper throws
+     * comes through. Null gives an empty array when $nullable.
      *
      * @template TResult
      *
@@ -549,7 +569,12 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Like yieldMap(), but $mapper's results are yielded as they are, without wrapping.
+     * Yields $mapper's result for each item of yieldArray() as it is, without wrapping, with the
+     * item's key. Calls $mapper($item, $key) for each one: $item is the item, wrapped in this class
+     * with its own path, and $key its original key, which an iterator can make any type.
+     *
+     * The value is checked when this is called; $mapper runs during iteration, and an exception it
+     * throws comes through then. Null gives no items when $nullable.
      *
      * @template TResult
      *
@@ -565,12 +590,15 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Like yieldRawMap(), but each result of $mapper must be iterable, and its items are yielded
-     * one by one (yield from) instead of the result itself. Returning another untrusted value, like
-     * $item->property('tags'), yields its items wrapped with their paths; returning a plain array
-     * yields its values as they are. Keys come from each result, so they repeat across items; use
-     * iterator_to_array($generator, false) to collect them. The value is checked when this is
-     * called; $mapper runs during iteration.
+     * Yields the items of $mapper's result for each item of yieldArray(), one by one (yield from).
+     * Calls $mapper($item, $key) for each one: $item is the item, wrapped in this class with its
+     * own path, and $key its original key, which an iterator can make any type. It must return an
+     * iterable: another untrusted value, like $item->property('tags'), yields its items wrapped
+     * with their paths, and a plain array its values as they are.
+     *
+     * Keys come from each result, so they repeat across items; use iterator_to_array($generator,
+     * false) to collect them. The value is checked when this is called; $mapper runs during
+     * iteration, and an exception it throws comes through then. Null gives no items when $nullable.
      *
      * @template TKey
      * @template TResult
@@ -587,7 +615,10 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Like listMap(), but $mapper's results are returned as they are, without wrapping.
+     * A list of $mapper's result for each item as it is, without wrapping, numbered 0, 1, 2, ….
+     * Calls $mapper($item, $index) for each item of yieldList(): $item is the item, wrapped in this
+     * class with its own path, and $index its position, from 0. An exception $mapper throws comes
+     * through. Null gives an empty list when $nullable.
      *
      * @template TResult
      *
@@ -603,7 +634,10 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Like arrayMap(), but $mapper's results are returned as they are, without wrapping.
+     * An array of $mapper's result for each item as it is, without wrapping, with the item's key.
+     * Calls $mapper($item, $key) for each item of array(): $item is the item, wrapped in this class
+     * with its own path, and $key its original key, an int or string. An exception $mapper throws
+     * comes through. Null gives an empty array when $nullable.
      *
      * @template TResult
      *
@@ -624,12 +658,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item, with its key, as an int from int() with the same $nullable, like yieldArray().
-     * A null value has no items, so it throws. Items are converted during iteration.
+     * Yields each item of yieldArray(), with its key, as an int from int() with the same $nullable,
+     * so null items are kept unless $nullable is false. Unlike yieldArray(), a null value throws
+     * rather than giving no items. Items are converted during iteration, so a bad item throws then.
      *
      * @return ($nullable is false ? \Generator<mixed, int, mixed, void> : \Generator<mixed, int|null, mixed, void>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object.
+     * @throws WrongTypeException When the value is null or neither an array nor an object; a bad item throws during iteration.
      */
     public function yieldInt(bool $nullable = true): \Generator
     {
@@ -637,12 +672,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as an int from int() with the same $nullable, in a list like list(). A null
-     * value has no items, so it throws.
+     * Each item of list(), as an int from int() with the same $nullable, so null items are kept
+     * unless $nullable is false. Unlike list(), a null value throws rather than giving an empty
+     * list.
      *
      * @return ($nullable is false ? list<int> : list<int|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function listInt(bool $nullable = true): array
     {
@@ -650,12 +686,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as an int from int() with the same $nullable, with the same keys like array().
-     * A null value has no items, so it throws.
+     * Each item of array(), with its key, as an int from int() with the same $nullable, so null
+     * items are kept unless $nullable is false. Unlike array(), a null value throws rather than
+     * giving an empty array.
      *
      * @return ($nullable is false ? array<array-key, int> : array<array-key, int|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function arrayInt(bool $nullable = true): array
     {
@@ -663,12 +700,14 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item, with its key, as a float from float() with the same $nullable, like yieldArray().
-     * A null value has no items, so it throws. Items are converted during iteration.
+     * Yields each item of yieldArray(), with its key, as a float from float() with the same
+     * $nullable, so null items are kept unless $nullable is false. Unlike yieldArray(), a null
+     * value throws rather than giving no items. Items are converted during iteration, so a bad item
+     * throws then.
      *
      * @return ($nullable is false ? \Generator<mixed, float, mixed, void> : \Generator<mixed, float|null, mixed, void>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object.
+     * @throws WrongTypeException When the value is null or neither an array nor an object; a bad item throws during iteration.
      */
     public function yieldFloat(bool $nullable = true): \Generator
     {
@@ -676,12 +715,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as a float from float() with the same $nullable, in a list like list(). A null
-     * value has no items, so it throws.
+     * Each item of list(), as a float from float() with the same $nullable, so null items are kept
+     * unless $nullable is false. Unlike list(), a null value throws rather than giving an empty
+     * list.
      *
      * @return ($nullable is false ? list<float> : list<float|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function listFloat(bool $nullable = true): array
     {
@@ -689,12 +729,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as a float from float() with the same $nullable, with the same keys like array().
-     * A null value has no items, so it throws.
+     * Each item of array(), with its key, as a float from float() with the same $nullable, so null
+     * items are kept unless $nullable is false. Unlike array(), a null value throws rather than
+     * giving an empty array.
      *
      * @return ($nullable is false ? array<array-key, float> : array<array-key, float|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function arrayFloat(bool $nullable = true): array
     {
@@ -702,12 +743,14 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item, with its key, as a string from string() with the same $nullable, like yieldArray().
-     * A null value has no items, so it throws. Items are converted during iteration.
+     * Yields each item of yieldArray(), with its key, as a string from string() with the same
+     * $nullable, so null items are kept unless $nullable is false. Unlike yieldArray(), a null
+     * value throws rather than giving no items. Items are converted during iteration, so a bad item
+     * throws then.
      *
      * @return ($nullable is false ? \Generator<mixed, string, mixed, void> : \Generator<mixed, string|null, mixed, void>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object.
+     * @throws WrongTypeException When the value is null or neither an array nor an object; a bad item throws during iteration.
      */
     public function yieldString(bool $nullable = true): \Generator
     {
@@ -715,12 +758,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as a string from string() with the same $nullable, in a list like list(). A null
-     * value has no items, so it throws.
+     * Each item of list(), as a string from string() with the same $nullable, so null items are
+     * kept unless $nullable is false. Unlike list(), a null value throws rather than giving an
+     * empty list.
      *
      * @return ($nullable is false ? list<string> : list<string|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function listString(bool $nullable = true): array
     {
@@ -728,12 +772,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as a string from string() with the same $nullable, with the same keys like array().
-     * A null value has no items, so it throws.
+     * Each item of array(), with its key, as a string from string() with the same $nullable, so
+     * null items are kept unless $nullable is false. Unlike array(), a null value throws rather
+     * than giving an empty array.
      *
      * @return ($nullable is false ? array<array-key, string> : array<array-key, string|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function arrayString(bool $nullable = true): array
     {
@@ -741,12 +786,14 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item, with its key, as a scalar from requireScalar() with the same $nullable, like yieldArray().
-     * A null value has no items, so it throws. Items are converted during iteration.
+     * Yields each item of yieldArray(), with its key, as a scalar from requireScalar() with the
+     * same $nullable, so null items are kept unless $nullable is false. Unlike yieldArray(), a null
+     * value throws rather than giving no items. Items are converted during iteration, so a bad item
+     * throws then.
      *
      * @return ($nullable is false ? \Generator<mixed, scalar, mixed, void> : \Generator<mixed, scalar|null, mixed, void>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object.
+     * @throws WrongTypeException When the value is null or neither an array nor an object; a bad item throws during iteration.
      */
     public function yieldScalar(bool $nullable = true): \Generator
     {
@@ -754,12 +801,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as a scalar from requireScalar() with the same $nullable, in a list like list(). A null
-     * value has no items, so it throws.
+     * Each item of list(), as a scalar from requireScalar() with the same $nullable, so null items
+     * are kept unless $nullable is false. Unlike list(), a null value throws rather than giving an
+     * empty list.
      *
      * @return ($nullable is false ? list<scalar> : list<scalar|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function listScalar(bool $nullable = true): array
     {
@@ -767,12 +815,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as a scalar from requireScalar() with the same $nullable, with the same keys like array().
-     * A null value has no items, so it throws.
+     * Each item of array(), with its key, as a scalar from requireScalar() with the same $nullable,
+     * so null items are kept unless $nullable is false. Unlike array(), a null value throws rather
+     * than giving an empty array.
      *
      * @return ($nullable is false ? array<array-key, scalar> : array<array-key, scalar|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function arrayScalar(bool $nullable = true): array
     {
@@ -780,12 +829,14 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item, with its key, as a bool from bool() with the same $nullable, like yieldArray().
-     * A null value has no items, so it throws. Items are converted during iteration.
+     * Yields each item of yieldArray(), with its key, as a bool from bool() with the same
+     * $nullable, so null items are kept unless $nullable is false. Unlike yieldArray(), a null
+     * value throws rather than giving no items. Items are converted during iteration, so a bad item
+     * throws then.
      *
      * @return ($nullable is false ? \Generator<mixed, bool, mixed, void> : \Generator<mixed, bool|null, mixed, void>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object.
+     * @throws WrongTypeException When the value is null or neither an array nor an object; a bad item throws during iteration.
      */
     public function yieldBool(bool $nullable = true): \Generator
     {
@@ -793,12 +844,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as a bool from bool() with the same $nullable, in a list like list(). A null value
-     * has no items, so it throws.
+     * Each item of list(), as a bool from bool() with the same $nullable, so null items are kept
+     * unless $nullable is false. Unlike list(), a null value throws rather than giving an empty
+     * list.
      *
      * @return ($nullable is false ? list<bool> : list<bool|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function listBool(bool $nullable = true): array
     {
@@ -806,12 +858,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Each item as a bool from bool() with the same $nullable, with the same keys like array().
-     * A null value has no items, so it throws.
+     * Each item of array(), with its key, as a bool from bool() with the same $nullable, so null
+     * items are kept unless $nullable is false. Unlike array(), a null value throws rather than
+     * giving an empty array.
      *
      * @return ($nullable is false ? array<array-key, bool> : array<array-key, bool|null>)
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an item can't be converted.
+     * @throws WrongTypeException When the value is null or neither an array nor an object, or an item can't be converted.
      */
     public function arrayBool(bool $nullable = true): array
     {
@@ -1166,7 +1219,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Returns the raw value, unchanged and unchecked.
+     * Returns the raw value, unchanged and unchecked. For a filter() or map() result, that is the
+     * generator of wrapped items.
      *
      * @return TValue
      */
@@ -1568,7 +1622,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         return !array_is_list($this->value);
     }
     /**
-     * Serializes to the raw value, unchanged.
+     * Serializes to the raw value, unchanged. A filter() or map() result holds a generator, which
+     * json_encode() turns into {}; collect it with list() first.
      *
      * @return TValue
      */
@@ -1577,6 +1632,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         return $this->value;
     }
     /**
+     * $mapper's result for each item, with its key, wrapped as mapItem() does.
+     *
      * @template TKey
      * @template TResult
      *
@@ -1610,6 +1667,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * $mapper's result for each item, with its key, as it is.
+     *
      * @template TKey
      * @template TResult
      *
@@ -1626,6 +1685,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * The items of $mapper's result for each item, one by one (yield from).
+     *
      * @template TKey
      * @template TResult
      *
@@ -1692,6 +1753,10 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * Each item of $items as a new object of this class with the path of its key, keyed as in
+     * $items, or numbered 0, 1, 2, … unless $keepKeys. An item that already is an untrusted value
+     * keeps its own path.
+     *
      * @param iterable<mixed, mixed> $items
      *
      * @return \Generator<mixed, static<mixed>, mixed, void>
@@ -1790,6 +1855,9 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         return $this->path === '' ? $name : $this->path . '.' . $name;
     }
 
+    /**
+     * An InvalidTypeException with filter "required" for the missing property $name, at its path.
+     */
     private function missingProperty(string $name): InvalidTypeException
     {
         $path = $this->childPath($name);
@@ -1937,6 +2005,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * A WrongTypeException for this value and path, expecting $expectedType.
+     *
      * The given type defaults to get_debug_type() of the value. Pass one when there is a more
      * precise description, e.g. "non-numeric-string".
      */

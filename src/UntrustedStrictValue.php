@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Puggan\UntrustedValue;
 
 /**
- * Wraps a value from an untrusted source. int(), float() and string() only accept the exact type,
- * except that float() widens an int. See UntrustedValue for converting compatible values too.
+ * Wraps a value from an untrusted source. int(), float(), string() and bool() only accept the
+ * exact type, except that float() widens an int. See UntrustedValue for converting compatible
+ * values too.
  *
  * @template-covariant TValue The type of the raw value. Only describes what was wrapped, it is not checked.
  *
@@ -71,7 +72,7 @@ final class UntrustedStrictValue extends AbstractUntrustedValue
      *
      * @return ($nullable is false ? int&TValue : (int|null)&TValue)
      *
-     * @throws WrongTypeException When the value is not an int, or null when allowed.
+     * @throws WrongTypeException When the value is not an int, or is null when not allowed.
      */
     public function int(bool $nullable = true): ?int
     {
@@ -105,7 +106,7 @@ final class UntrustedStrictValue extends AbstractUntrustedValue
      *     : (TValue is float|null ? TValue : (TValue is scalar|array|object|resource ? float : float|null))
      * )
      *
-     * @throws WrongTypeException When the value is not a float or an int, or null when allowed.
+     * @throws WrongTypeException When the value is neither a float nor an int, or is null when not allowed.
      */
     public function float(bool $nullable = true): ?float
     {
@@ -133,7 +134,7 @@ final class UntrustedStrictValue extends AbstractUntrustedValue
      *
      * @return ($nullable is false ? string&TValue : (string|null)&TValue)
      *
-     * @throws WrongTypeException When the value is not a string, or null when allowed.
+     * @throws WrongTypeException When the value is not a string, or is null when not allowed.
      */
     public function string(bool $nullable = true): ?string
     {
@@ -158,7 +159,7 @@ final class UntrustedStrictValue extends AbstractUntrustedValue
      *
      * @return ($nullable is false ? bool&TValue : (bool|null)&TValue)
      *
-     * @throws WrongTypeException When the value is not a bool, or null when allowed.
+     * @throws WrongTypeException When the value is not a bool, or is null when not allowed.
      */
     public function bool(bool $nullable = true): ?bool
     {
