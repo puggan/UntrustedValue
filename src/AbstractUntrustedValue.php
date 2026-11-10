@@ -361,6 +361,62 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * Like yieldArray(), but each item is passed to $mapper, with its key, and the result is
+     * yielded instead. A result that is not an AbstractUntrustedValue is wrapped in a new object of
+     * this class with the item's path. The value is checked when this is called; $mapper runs
+     * during iteration.
+     *
+     * @template TResult
+     *
+     * @param callable(static<mixed>, mixed): TResult $mapper
+     *
+     * @return \Generator<mixed, (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>), mixed, void>
+     *
+     * @throws WrongTypeException When yieldArray() throws.
+     */
+    public function yieldMap(callable $mapper, bool $nullable = true): \Generator
+    {
+        return $this->mapItems($this->yieldArray($nullable), $mapper);
+    }
+
+    /**
+     * Like list(), but with each item passed to $mapper, with its index, as yieldMap() does.
+     *
+     * @template TResult
+     *
+     * @param callable(static<mixed>, int): TResult $mapper
+     *
+     * @return list<(TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>)>
+     *
+     * @throws WrongTypeException When yieldList() throws.
+     */
+    public function listMap(callable $mapper, bool $nullable = true): array
+    {
+        return iterator_to_array($this->mapItems($this->yieldList($nullable), $mapper), false);
+    }
+
+    /**
+     * Like array(), but with each item passed to $mapper, with its key, as yieldMap() does.
+     *
+     * @template TResult
+     *
+     * @param callable(static<mixed>, array-key): TResult $mapper
+     *
+     * @return array<array-key, (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>)>
+     *
+     * @throws WrongTypeException When yieldArray() throws, or yields a key that is not an int or string.
+     */
+    public function arrayMap(callable $mapper, bool $nullable = true): array
+    {
+        $array = [];
+        foreach ($this->array($nullable) as $key => $item) {
+            $array[$key] = $this->mapItem($item, $key, $mapper);
+        }
+
+        return $array;
+    }
+
+    /**
      * Whether the value has the property: a public property of an object, or a key of an array.
      * Other values have no properties, so it is false for them.
      */
@@ -810,6 +866,46 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     {
         return $this->value;
     }
+    /**
+     * @template TKey
+     * @template TResult
+     *
+     * @param \Generator<TKey, static<mixed>, mixed, void> $items
+     * @param callable(static<mixed>, TKey): TResult $mapper
+     *
+     * @return \Generator<TKey, (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>), mixed, void>
+     */
+    private function mapItems(\Generator $items, callable $mapper): \Generator
+    {
+        foreach ($items as $key => $item) {
+            yield $key => $this->mapItem($item, $key, $mapper);
+        }
+    }
+
+    /**
+     * $mapper's result for the item, wrapped in this class with the item's path unless it already
+     * is an AbstractUntrustedValue.
+     *
+     * @template TKey
+     * @template TResult
+     *
+     * @param static<mixed> $item
+     * @param TKey $key
+     * @param callable(static<mixed>, TKey): TResult $mapper
+     *
+     * @return (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>)
+     */
+    private function mapItem(self $item, mixed $key, callable $mapper): self
+    {
+        $result = $mapper($item, $key);
+
+        if ($result instanceof AbstractUntrustedValue) {
+            return $result;
+        }
+
+        return new static($result, $item->path);
+    }
+
     /**
      * What yieldList() and yieldArray() iterate: an array or a Traversable object itself, the
      * public properties of another object, or an empty array for null when $nullable.
