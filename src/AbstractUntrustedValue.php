@@ -846,6 +846,42 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
         return $this->value;
     }
     /**
+     * The value as a case of the backed enum $enum, found with tryFrom(). The value is first read
+     * with int() or string(), matching the enum's backing type, so UntrustedValue accepts "2" for
+     * an int-backed case while UntrustedStrictValue requires the exact type.
+     *
+     * @template TEnum of \BackedEnum
+     *
+     * @param class-string<TEnum> $enum
+     *
+     * @return ($nullable is false ? TEnum : TEnum|null)
+     *
+     * @throws WrongTypeException When the value can't be read as the backing type, or is null when not allowed.
+     * @throws InvalidTypeException When the value is not one of the enum's backing values.
+     */
+    public function enum(string $enum, bool $nullable = true): ?\BackedEnum
+    {
+        if ($this->value === null) {
+            if (!$nullable) {
+                throw $this->wrongType($enum);
+            }
+
+            return null;
+        }
+
+        // No new \ReflectionEnum($enum)->getBackingType(): that syntax needs PHP 8.4, src/ supports 8.1.
+        $reflection = new \ReflectionEnum($enum);
+        $backingValue = (string) $reflection->getBackingType() === 'int'
+            ? $this->int(false)
+            : $this->string(false);
+
+        return $enum::tryFrom($backingValue) ?? throw $this->invalid('enum', sprintf(
+            'one of %s',
+            implode(', ', array_map(static fn(\BackedEnum $case): string => var_export($case->value, true), $enum::cases())),
+        ));
+    }
+
+    /**
      * Whether int() with the same $nullable would return an int instead of throwing.
      */
     public function isInt(bool $nullable = true): bool
