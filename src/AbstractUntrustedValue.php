@@ -333,6 +333,32 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     }
 
     /**
+     * This object, when the value is not below $min and not above $max. A null bound is not
+     * checked, and a null value passes. The comparison is PHP's < and >, so the value's type is not
+     * checked here; convert it first, e.g. with asInt().
+     *
+     * @return $this
+     *
+     * @throws InvalidTypeException When the value is below $min or above $max.
+     */
+    public function range(int|float|string|null $min = null, int|float|string|null $max = null): static
+    {
+        if ($this->value === null) {
+            return $this;
+        }
+
+        if ($min !== null && $this->value < $min) {
+            throw $this->invalid('min', sprintf('at least %s', $min));
+        }
+
+        if ($max !== null && $this->value > $max) {
+            throw $this->invalid('max', sprintf('at most %s', $max));
+        }
+
+        return $this;
+    }
+
+    /**
      * Returns the raw value, unchanged and unchecked.
      *
      * @return TValue
@@ -465,6 +491,21 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     {
         return $this->value;
     }
+    /**
+     * An InvalidTypeException for a filter the value failed, with a message like
+     * "Expected at least 0 at user.age".
+     */
+    private function invalid(string $filter, string $expected): InvalidTypeException
+    {
+        return new InvalidTypeException(
+            $this->path === ''
+                ? sprintf('Expected %s', $expected)
+                : sprintf('Expected %s at %s', $expected, $this->path),
+            $filter,
+            $this->path,
+        );
+    }
+
     /**
      * Whether the value is a string. PHPStan narrows this object's TValue to match either way.
      *
