@@ -12,8 +12,8 @@ composer require puggan/untrusted-value
 
 Requires PHP 8.1 or later, with ext-mbstring.
 
-PHP 8.1 is the floor because the wrapped value and its path are `readonly` promoted constructor
-properties, which PHP 8.1 introduced. The test suite passes on PHP 8.1 through 8.5, and on the
+PHP 8.1 is the floor because the wrapped value and its path are `readonly` properties, which PHP
+8.1 introduced. The test suite passes on PHP 8.1 through 8.5, and on the
 8.6 release candidate.
 
 ## Example
