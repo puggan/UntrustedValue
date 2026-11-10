@@ -270,6 +270,22 @@ final class AsStructureTest extends TestCase
         self::assertSame($untrusted, $untrusted->asObject());
     }
 
+    public function testAsArrayOnlyTakesPublicProperties(): void
+    {
+        $object = new class {
+            public int $visible = 1;
+            protected int $protected = 2;
+            private int $private = 3;
+
+            public function sum(): int
+            {
+                return $this->protected + $this->private;
+            }
+        };
+
+        self::assertSame(['visible' => 1], new UntrustedValue($object)->asArray()->value);
+    }
+
     private static function wrongTypeFrom(callable $call): WrongTypeException
     {
         try {

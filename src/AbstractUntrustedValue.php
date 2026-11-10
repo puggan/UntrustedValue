@@ -241,8 +241,9 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     /**
      * The value as an array: this object when it already is one, or a new object of the same class
      * and path holding the items of a Traversable object (like an iterator or generator) with their
-     * keys, or another object's properties cast to an array. Null returns this object too when
-     * $nullable. A generator can only be iterated once, so converting one uses it up.
+     * keys, or the public properties of another object (get_object_vars(), so protected and private
+     * ones never leak out). Null returns this object too when $nullable. A generator can only be
+     * iterated once, so converting one uses it up.
      *
      * @return (
      *     $nullable is false
@@ -274,7 +275,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
             throw $this->wrongType('array');
         }
 
-        return new static((array) $this->value, $this->path);
+        return new static(get_object_vars($this->value), $this->path);
     }
 
     /**
