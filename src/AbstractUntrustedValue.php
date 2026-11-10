@@ -158,6 +158,118 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     abstract public function asString(bool $nullable = true): UntrustedStrictValue;
 
     /**
+     * The value as a list, an array with keys 0, 1, 2, … in order: this object when it already is
+     * one, or a new object of the same class and path holding the values of another array
+     * (array_values()) or the public property values of an object. An empty array is a list. Null
+     * returns this object too when $nullable.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? static<(TValue is list<mixed>|scalar|null|resource ? list<mixed>&TValue : list<mixed>)>
+     *     : static<(TValue is list<mixed>|scalar|null|resource ? list<mixed>&TValue : list<mixed>)|(null&TValue)>
+     * )
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
+     */
+    public function asList(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('list');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsList()) {
+            return $this;
+        }
+
+        if (is_array($this->value)) {
+            return new static(array_values($this->value), $this->path);
+        }
+
+        if (is_object($this->value)) {
+            return new static(array_values(get_object_vars($this->value)), $this->path);
+        }
+
+        throw $this->wrongType('list');
+    }
+
+    /**
+     * The value as an array: this object when it already is one, or a new object of the same class
+     * and path holding an object's properties cast to an array. Null returns this object too when
+     * $nullable.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? static<(TValue is array|scalar|null|resource ? array<mixed>&TValue : array<mixed>)>
+     *     : static<(TValue is array|scalar|null|resource ? array<mixed>&TValue : array<mixed>)|(null&TValue)>
+     * )
+     *
+     * @throws WrongTypeException When the value is neither an array nor an object, or is null when not allowed.
+     */
+    public function asArray(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('array');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsArray()) {
+            return $this;
+        }
+
+        if (!is_object($this->value)) {
+            throw $this->wrongType('array');
+        }
+
+        return new static((array) $this->value, $this->path);
+    }
+
+    /**
+     * The value as an object: this object when it already is one, or a new object of the same class
+     * and path holding a non-list array cast to a \stdClass. A list has no property names, so it is
+     * rejected, and so is an empty array, which counts as a list. Null returns this object too when
+     * $nullable.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? static<(TValue is object|scalar|null|resource ? object&TValue : (object&TValue)|\stdClass)>
+     *     : static<(TValue is object|scalar|null|resource ? object&TValue : (object&TValue)|\stdClass)|(null&TValue)>
+     * )
+     *
+     * @throws WrongTypeException When the value is a list, neither an array nor an object, or is null when not allowed.
+     */
+    public function asObject(bool $nullable = true): static
+    {
+        if ($this->valueIsNull()) {
+            if (!$nullable) {
+                throw $this->wrongType('object');
+            }
+
+            return $this;
+        }
+
+        if ($this->valueIsObject()) {
+            return $this;
+        }
+
+        if (!is_array($this->value)) {
+            throw $this->wrongType('object');
+        }
+
+        if (array_is_list($this->value)) {
+            throw $this->wrongType('object', 'list');
+        }
+
+        return new static((object) $this->value, $this->path);
+    }
+
+    /**
      * Returns the raw value, unchanged and unchecked.
      *
      * @return TValue
@@ -290,6 +402,46 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
     {
         return $this->value;
     }
+    /**
+     * Whether the value is null. When it is, PHPStan narrows this object's TValue to match.
+     *
+     * @phpstan-assert-if-true static<null&TValue> $this
+     */
+    private function valueIsNull(): bool
+    {
+        return $this->value === null;
+    }
+
+    /**
+     * Whether the value is a list. When it is, PHPStan narrows this object's TValue to match.
+     *
+     * @phpstan-assert-if-true static<list<mixed>&TValue> $this
+     */
+    private function valueIsList(): bool
+    {
+        return is_array($this->value) && array_is_list($this->value);
+    }
+
+    /**
+     * Whether the value is an array. When it is, PHPStan narrows this object's TValue to match.
+     *
+     * @phpstan-assert-if-true static<array<mixed>&TValue> $this
+     */
+    private function valueIsArray(): bool
+    {
+        return is_array($this->value);
+    }
+
+    /**
+     * Whether the value is an object. When it is, PHPStan narrows this object's TValue to match.
+     *
+     * @phpstan-assert-if-true static<object&TValue> $this
+     */
+    private function valueIsObject(): bool
+    {
+        return is_object($this->value);
+    }
+
     /**
      * The given type defaults to get_debug_type() of the value. Pass one when there is a more
      * precise description, e.g. "non-numeric-string".
