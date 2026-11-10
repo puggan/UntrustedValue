@@ -8,7 +8,7 @@ namespace Puggan\UntrustedValue;
  * Wraps a value from an untrusted source. int(), float() and string() also convert compatible
  * values, like the string "42" to the int 42. See UntrustedStrictValue for exact types only.
  *
- * @template TValue The type of the raw value. Only describes what was wrapped, it is not checked.
+ * @template-covariant TValue The type of the raw value. Only describes what was wrapped, it is not checked.
  *
  * @extends AbstractUntrustedValue<TValue>
  */
@@ -28,6 +28,22 @@ final class UntrustedValue extends AbstractUntrustedValue
     public function asLoose(): UntrustedValue
     {
         return $this;
+    }
+
+    /**
+     * The value converted by int(), wrapped as an UntrustedStrictValue with the same path.
+     *
+     * @return (
+     *     $nullable is false
+     *     ? UntrustedStrictValue<(TValue is int ? TValue : int)>
+     *     : UntrustedStrictValue<(TValue is int|null ? TValue : (TValue is scalar|array|object|resource ? int : int|null))>
+     * )
+     *
+     * @throws WrongTypeException When int() throws.
+     */
+    public function asInt(bool $nullable = true): UntrustedStrictValue
+    {
+        return new UntrustedStrictValue($this->int(nullable: $nullable), $this->path);
     }
 
     /**

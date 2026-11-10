@@ -9,7 +9,7 @@ namespace Puggan\UntrustedValue;
  * decide how strict int(), float() and string() are: UntrustedValue converts compatible values,
  * UntrustedStrictValue only accepts the exact type.
  *
- * @template TValue The type of the raw value. Only describes what was wrapped, it is not checked.
+ * @template-covariant TValue The type of the raw value. Only describes what was wrapped, it is not checked.
  */
 abstract class AbstractUntrustedValue implements \JsonSerializable
 {
@@ -111,16 +111,18 @@ abstract class AbstractUntrustedValue implements \JsonSerializable
 
     /**
      * The value converted by int(), wrapped as an UntrustedStrictValue with the same path, so it
-     * can be checked further while it is known to be an int.
+     * can be checked further while it is known to be an int. The wrapped type follows int()'s
+     * return type, which UntrustedStrictValue narrows further.
      *
-     * @return ($nullable is false ? UntrustedStrictValue<int> : UntrustedStrictValue<int|null>)
+     * @return (
+     *     $nullable is false
+     *     ? UntrustedStrictValue<(TValue is int ? TValue : int)>
+     *     : UntrustedStrictValue<(TValue is int|null ? TValue : (TValue is scalar|array|object|resource ? int : int|null))>
+     * )
      *
      * @throws WrongTypeException When int() throws.
      */
-    public function asInt(bool $nullable = true): UntrustedStrictValue
-    {
-        return new UntrustedStrictValue($this->int(nullable: $nullable), $this->path);
-    }
+    abstract public function asInt(bool $nullable = true): UntrustedStrictValue;
 
     /**
      * Returns the raw value, unchanged and unchecked.

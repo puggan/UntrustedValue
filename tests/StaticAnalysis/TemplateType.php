@@ -26,8 +26,8 @@ function templateType(UntrustedValue $shaped, UntrustedStrictValue $strictShaped
     assertType('Puggan\UntrustedValue\UntrustedValue<mixed>', UntrustedValue::fromJson($json));
     assertType('Puggan\UntrustedValue\UntrustedStrictValue<mixed>', UntrustedStrictValue::fromJson($json));
     assertType('mixed', UntrustedValue::fromJson($json)->raw());
-    assertType('Puggan\UntrustedValue\UntrustedValue<int>', new UntrustedValue(42));
-    assertType('Puggan\UntrustedValue\UntrustedStrictValue<int>', new UntrustedStrictValue(42));
-    assertType('int', new UntrustedValue(42)->raw());
-    assertType('string', new UntrustedStrictValue('text')->raw());
+    assertType('Puggan\UntrustedValue\UntrustedValue<42>', new UntrustedValue(42));
+    assertType('Puggan\UntrustedValue\UntrustedStrictValue<42>', new UntrustedStrictValue(42));
+    assertType('42', new UntrustedValue(42)->raw());
+    assertType("'text'", new UntrustedStrictValue('text')->raw());
 }
