@@ -405,22 +405,46 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
 
     /**
      * A new object of the same class and path, holding a generator of the items of yieldArray()
-     * that $callback returns true for, with their raw values and original keys. Iterating it, or
-     * calling list(), listInt(), map() and the like on it, wraps each item again with the same path
-     * as before, so filter() can be chained. Use asList() on the result to number the items 0, 1, 2.
+     * that $callback returns true for, with their original keys. Iterating it, or calling list(),
+     * listInt(), map() and the like on it, gives those items again with their own paths, so
+     * filter() can be chained and errors still point into the original input. asList() on the
+     * result numbers the items 0, 1, 2.
      *
      * The value is checked when this is called; $callback runs when the result is iterated, which
      * can only happen once. Null gives no items.
      *
      * @param callable(static<mixed>, mixed): bool $callback
      *
-     * @return static<\Generator<mixed, mixed, mixed, void>>
+     * @return static<\Generator<mixed, static<mixed>, mixed, void>>
      *
      * @throws WrongTypeException When yieldArray() throws.
      */
     public function filter(callable $callback): static
     {
         return new static($this->filterItems($this->yieldArray(), $callback), $this->path);
+    }
+
+    /**
+     * A new object of the same class and path, holding a generator of $mapper's result for each
+     * item of yieldArray(), with the original keys, as yieldMap() gives them. Like filter(), it can
+     * be chained: iterating the result, or calling list(), listInt(), filter() and the like on it,
+     * gives each result with its own path, so $item->property('age') keeps "users.1.age". A plain
+     * result gets its item's path. The class of the new object decides strictness from then on.
+     *
+     * The value is checked when this is called; $mapper runs when the result is iterated, which can
+     * only happen once. Null gives no items.
+     *
+     * @template TResult
+     *
+     * @param callable(static<mixed>, mixed): TResult $mapper
+     *
+     * @return static<\Generator<mixed, (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>), mixed, void>>
+     *
+     * @throws WrongTypeException When yieldArray() throws.
+     */
+    public function map(callable $mapper): static
+    {
+        return new static($this->mapItems($this->yieldArray(), $mapper), $this->path);
     }
 
     /**
@@ -1279,18 +1303,18 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * The raw values of the items $callback returns true for, with their keys.
+     * The items $callback returns true for, with their keys.
      *
      * @param \Generator<mixed, static<mixed>, mixed, void> $items
      * @param callable(static<mixed>, mixed): bool $callback
      *
-     * @return \Generator<mixed, mixed, mixed, void>
+     * @return \Generator<mixed, static<mixed>, mixed, void>
      */
     private function filterItems(\Generator $items, callable $callback): \Generator
     {
         foreach ($items as $key => $item) {
             if ($callback($item, $key)) {
-                yield $key => $item->value;
+                yield $key => $item;
             }
         }
     }
@@ -1388,6 +1412,14 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         foreach ($items as $key => $item) {
             if (!$keepKeys) {
                 $key = $index++;
+            }
+
+            // An item that already is an untrusted value, as from filter() or map(), keeps its own
+            // path, so errors still point into the original input.
+            if ($item instanceof AbstractUntrustedValue) {
+                yield $key => new static($item, $item->path);
+
+                continue;
             }
 
             $name = is_int($key) || is_string($key) ? (string) $key : '[' . get_debug_type($key) . ']';

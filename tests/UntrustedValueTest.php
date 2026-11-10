@@ -150,15 +150,16 @@ final class UntrustedValueTest extends TestCase
         self::assertSame(7, new UntrustedValue(new UntrustedValue(new UntrustedStrictValue(7)))->value);
     }
 
-    public function testItemsOfAWrappedIteratorAreNotWrappedTwice(): void
+    public function testItemsOfAWrappedIteratorAreNotWrappedTwiceAndKeepTheirPath(): void
     {
         $generator = (static function (): \Generator {
-            yield 'a' => new UntrustedValue(1, 'somewhere.else');
+            yield 'a' => new UntrustedStrictValue(1, 'somewhere.else');
         })();
 
         foreach (new UntrustedValue($generator, 'list') as $key => $item) {
             self::assertSame(1, $item->value);
-            self::assertSame('list.a', $item->path);
+            self::assertSame('somewhere.else', $item->path);
+            self::assertSame(UntrustedValue::class, $item::class);
         }
     }
 }

@@ -37,11 +37,14 @@ final class FilterTest extends TestCase
         self::assertSame([['a', 1, 'n.a'], ['c', 3, 'n.c']], self::collect($filtered));
     }
 
-    public function testHoldsAGeneratorOfRawValues(): void
+    public function testHoldsAGeneratorOfTheWrappedItems(): void
     {
-        $filtered = new UntrustedValue(['a' => 1, 'b' => 2])->filter(static fn(UntrustedValue $item): bool => true);
+        $filtered = new UntrustedValue(['a' => 1, 'b' => 2], 'n')->filter(static fn(UntrustedValue $item): bool => true);
 
-        self::assertSame(['a' => 1, 'b' => 2], iterator_to_array($filtered->raw()));
+        self::assertSame(['n.a', 'n.b'], array_values(array_map(
+            static fn(UntrustedValue $item): string => $item->path,
+            iterator_to_array($filtered->raw()),
+        )));
     }
 
     public function testCanBeChained(): void
@@ -54,12 +57,16 @@ final class FilterTest extends TestCase
         self::assertSame([12, 7, 30], $result);
     }
 
-    public function testAsListRenumbersButPathsKeepTheOriginalKeys(): void
+    public function testPathsKeepTheOriginalKeysEvenWhenRenumbered(): void
     {
         $filtered = new UntrustedValue([10, 11, 12, 13], 'n')->filter(static fn(UntrustedValue $item): bool => $item->int(false) > 11);
-
         self::assertSame([[2, 12, 'n.2'], [3, 13, 'n.3']], self::collect($filtered));
-        self::assertSame([12, 13], new UntrustedValue([10, 11, 12, 13])->filter(static fn(UntrustedValue $item): bool => $item->int(false) > 11)->asList()->value);
+
+        $paths = [];
+        foreach (new UntrustedValue([10, 11, 12, 13], 'n')->filter(static fn(UntrustedValue $item): bool => $item->int(false) > 11)->yieldList() as $index => $item) {
+            $paths[$index] = $item->path;
+        }
+        self::assertSame(['n.2', 'n.3'], $paths);
     }
 
     public function testCallbackGetsTheKey(): void
