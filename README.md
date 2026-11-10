@@ -104,7 +104,7 @@ Most methods take `bool $nullable = true`: null is accepted, and passes through,
 | Get a plain value | `int()`, `float()`, `string()`, `bool()`, `enum()`, `date()`, `raw()` |
 | Check | `isInt()`, `isFloat()`, `isString()`, `isBool()`, `isNull()`, `isScalar()`, `isIterable()`, `isArray()`, `isObject()`, `isList()`, `isMap()`, `hasProperty()`, `hasProperties()` |
 | Require, else throw | `requireNull()`, `requireScalar()`, `requireArray()`, `requireObject()`, `requireList()`, `requireMap()`, `requireProperty()` |
-| Convert | `asInt()`, `asFloat()`, `asString()`, `asBool()`, `asList()`, `asArray()`, `asObject()`, `asStrict()`, `asLoose()` |
+| Convert | `asInt()`, `asFloat()`, `asString()`, `asBool()`, `json()`, `asList()`, `asArray()`, `asObject()`, `asStrict()`, `asLoose()` |
 | Validate | `range()`, `length()`, `count()`, `oneOf()`, `match()`, `notMatch()` |
 | Change | `trim()`, `replace()`, `default()`, `blankDefault()`, `split()`, `csv()` |
 | Read nested values | `property()`, `list()`, `array()`, `yieldList()`, `yieldArray()`, or `foreach` directly |

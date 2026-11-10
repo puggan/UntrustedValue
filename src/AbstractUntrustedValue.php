@@ -51,17 +51,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      */
     public static function fromJson(string $json): static
     {
-        try {
-            return new static(json_decode($json, false, 512, JSON_THROW_ON_ERROR));
-        } catch (\JsonException $exception) {
-            throw new WrongTypeException(
-                'Invalid JSON: ' . $exception->getMessage(),
-                'json',
-                'string',
-                '',
-                $exception,
-            );
-        }
+        return new static(self::decodeJson($json, ''));
     }
 
     /**
@@ -1232,6 +1222,25 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * The value decoded as JSON, for a field that holds a JSON string, as a new object of the same
+     * class and path, so the decoded fields get paths like "payload.id". JSON objects become
+     * \stdClass objects, as in fromJson(). The value is read with string(), so
+     * UntrustedStrictValue requires a string. Null returns this object.
+     *
+     * @return static<mixed>
+     *
+     * @throws WrongTypeException When string() can't return a string, or the string is not valid JSON.
+     */
+    public function json(): static
+    {
+        if ($this->valueIsNull()) {
+            return $this;
+        }
+
+        return new static(self::decodeJson($this->string(false), $this->path), $this->path);
+    }
+
+    /**
      * Whether int() with the same $nullable would return an int instead of throwing.
      */
     public function isInt(bool $nullable = true): bool
@@ -1705,6 +1714,28 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         }
 
         return $array;
+    }
+
+    /**
+     * $json decoded, with JSON objects as \stdClass objects.
+     *
+     * @throws WrongTypeException When $json is not valid JSON, with the \JsonException as its previous exception.
+     */
+    private static function decodeJson(string $json, string $path): mixed
+    {
+        try {
+            return json_decode($json, false, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new WrongTypeException(
+                $path === ''
+                    ? 'Invalid JSON: ' . $exception->getMessage()
+                    : sprintf('Invalid JSON at %s: %s', $path, $exception->getMessage()),
+                'json',
+                'string',
+                $path,
+                $exception,
+            );
+        }
     }
 
     /**
