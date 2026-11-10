@@ -70,4 +70,10 @@ final class LengthTest extends TestCase
         $this->expectException(WrongTypeException::class);
         new UntrustedValue(['abc'])->length(3);
     }
+
+    public function testSingularInMessages(): void
+    {
+        $this->expectExceptionMessage('Expected at least 1 character at name');
+        new UntrustedValue('', 'name')->length(min: 1);
+    }
 }

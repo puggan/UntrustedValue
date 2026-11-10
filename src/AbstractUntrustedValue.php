@@ -808,11 +808,11 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         $length = mb_strlen($string);
 
         if ($length < $min) {
-            throw $this->invalid('minLength', sprintf('at least %d characters', $min));
+            throw $this->invalid('minLength', sprintf('at least %d %s', $min, $min === 1 ? 'character' : 'characters'));
         }
 
         if ($max !== null && $length > $max) {
-            throw $this->invalid('maxLength', sprintf('at most %d characters', $max));
+            throw $this->invalid('maxLength', sprintf('at most %d %s', $max, $max === 1 ? 'character' : 'characters'));
         }
 
         return $this;
@@ -853,11 +853,11 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         }
 
         if ($count < $min) {
-            throw $this->invalid('minCount', sprintf('at least %d items', $min));
+            throw $this->invalid('minCount', sprintf('at least %d %s', $min, $min === 1 ? 'item' : 'items'));
         }
 
         if ($max !== null && $count > $max) {
-            throw $this->invalid('maxCount', sprintf('at most %d items', $max));
+            throw $this->invalid('maxCount', sprintf('at most %d %s', $max, $max === 1 ? 'item' : 'items'));
         }
 
         return $counted;

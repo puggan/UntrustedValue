@@ -41,7 +41,7 @@ final class CountTest extends TestCase
         } catch (InvalidTypeException $exception) {
             self::assertSame('minCount', $exception->filter);
             self::assertSame('tags', $exception->path);
-            self::assertSame('Expected at least 1 items at tags', $exception->getMessage());
+            self::assertSame('Expected at least 1 item at tags', $exception->getMessage());
         }
     }
 
@@ -99,5 +99,11 @@ final class CountTest extends TestCase
     {
         $this->expectException(WrongTypeException::class);
         new UntrustedValue('abc')->count();
+    }
+
+    public function testPluralInMessages(): void
+    {
+        $this->expectExceptionMessage('Expected at most 1 item at tags');
+        new UntrustedValue([1, 2], 'tags')->count(1);
     }
 }
