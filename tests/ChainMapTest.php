@@ -27,14 +27,10 @@ final class ChainMapTest extends TestCase
 
     public function testWrappedResultsBecomeTheClassOfTheChain(): void
     {
-        $mapper = static fn(UntrustedValue $item): UntrustedStrictValue => $item->asInt(false);
+        $mapped = new UntrustedValue(['1', '2'])->map(static fn(UntrustedValue $item): UntrustedStrictValue => $item->asInt(false));
 
-        // Each map() result is a generator, which can only be iterated once.
-        self::assertSame([1, 2], new UntrustedValue(['1', '2'])->map($mapper)->listInt(false));
-        self::assertSame(
-            [UntrustedValue::class, UntrustedValue::class],
-            array_map(get_class(...), new UntrustedValue(['1', '2'])->map($mapper)->list()),
-        );
+        self::assertSame([1, 2], $mapped->listInt(false));
+        self::assertSame([UntrustedValue::class, UntrustedValue::class], array_map(get_class(...), $mapped->list()));
     }
 
     public function testChainsWithFilter(): void
@@ -105,5 +101,22 @@ final class ChainMapTest extends TestCase
     {
         $this->expectException(WrongTypeException::class);
         new UntrustedValue('abc')->map(static fn(): int => 1);
+    }
+
+    public function testCanBeIteratedMoreThanOnce(): void
+    {
+        $calls = 0;
+        $mapped = new UntrustedValue(['1', '2'], 'n')->map(static function (UntrustedValue $item) use (&$calls): int {
+            $calls++;
+
+            return $item->int(false) * 10;
+        });
+
+        $first = $mapped->listInt(false);
+        $second = $mapped->listInt(false);
+        self::assertSame([10, 20], $first);
+        self::assertSame($first, $second);
+        self::assertSame(['n.0', 'n.1'], array_map(static fn(UntrustedValue $item): string => $item->path, $mapped->list()));
+        self::assertSame(6, $calls, 'Each iteration runs the mapper again.');
     }
 }

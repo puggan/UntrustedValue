@@ -108,4 +108,30 @@ final class FilterTest extends TestCase
     {
         self::assertSame([], self::collect(UntrustedValue::fromJson('null')->filter(static fn(): bool => true)));
     }
+
+    public function testCanBeIteratedMoreThanOnce(): void
+    {
+        $adults = new UntrustedValue([5, 20, 40], 'ages')->filter(static fn(UntrustedValue $age): bool => $age->int(false) >= 18);
+
+        $first = $adults->listInt(false);
+        $second = $adults->listInt(false);
+        self::assertSame([20, 40], $first);
+        self::assertSame($first, $second);
+        self::assertFalse($adults->isList());
+        self::assertSame(2, iterator_count($adults));
+        self::assertSame([20, 40], $adults->asList()->listInt(false));
+    }
+
+    public function testChainedResultsCanBeIteratedMoreThanOnce(): void
+    {
+        $chain = UntrustedValue::fromJson('[{"age":"36"},{"age":"12"},{"age":"70"}]')
+            ->filter(static fn(UntrustedValue $user): bool => $user->property('age')->int(false) >= 18)
+            ->map(static fn(UntrustedValue $user): UntrustedValue => $user->property('age'));
+
+        $first = $chain->listInt(false);
+        $second = $chain->listInt(false);
+        self::assertSame([36, 70], $first);
+        self::assertSame($first, $second);
+        self::assertSame(['0.age', '2.age'], array_map(static fn(UntrustedValue $age): string => $age->path, $chain->list()));
+    }
 }

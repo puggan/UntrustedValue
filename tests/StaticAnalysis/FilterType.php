@@ -17,7 +17,7 @@ use Puggan\UntrustedValue\UntrustedValue;
  */
 function filterType(UntrustedValue $loose, UntrustedStrictValue $strict): void
 {
-    assertType('Puggan\UntrustedValue\UntrustedValue<Generator<mixed, Puggan\UntrustedValue\UntrustedValue<mixed>, mixed, void>>', $loose->filter(static fn(UntrustedValue $item): bool => true));
-    assertType('Puggan\UntrustedValue\UntrustedStrictValue<Generator<mixed, Puggan\UntrustedValue\UntrustedStrictValue<mixed>, mixed, void>>', $strict->filter(static fn(UntrustedStrictValue $item): bool => true));
+    assertType('Puggan\UntrustedValue\UntrustedValue<Puggan\UntrustedValue\LazyIterable<mixed, Puggan\UntrustedValue\UntrustedValue<mixed>>>', $loose->filter(static fn(UntrustedValue $item): bool => true));
+    assertType('Puggan\UntrustedValue\UntrustedStrictValue<Puggan\UntrustedValue\LazyIterable<mixed, Puggan\UntrustedValue\UntrustedStrictValue<mixed>>>', $strict->filter(static fn(UntrustedStrictValue $item): bool => true));
     assertType('list<int>', $loose->filter(static fn(UntrustedValue $item): bool => true)->listInt(false));
 }

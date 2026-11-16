@@ -123,8 +123,8 @@ $users->map(fn(UntrustedValue $user) => $user->property('age'))->listInt(false);
 {"message": "Expected int at 2.age, got non-numeric-string", "expectedType": "int", "givenType": "non-numeric-string", "path": "2.age"}
 ```
 
-A `filter()` or `map()` result is a generator, so it can be iterated only once: build the chain and
-end it with one `list…()`, `array…()` or `foreach`.
+A `filter()` or `map()` result can be iterated as often as you like, as it starts over each time;
+the callbacks then run again, so keep them free of side effects.
 
 To flatten, `yieldFlatMap()` yields every item of each result:
 

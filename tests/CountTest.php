@@ -72,12 +72,12 @@ final class CountTest extends TestCase
         new UntrustedValue($object)->count(min: 2);
     }
 
-    public function testCollectsAGeneratorSoItCanStillBeUsed(): void
+    public function testCountsAFilterResultAndReturnsThis(): void
     {
         $tags = new UntrustedValue(['a', '', 'b'], 'tags')
-            ->filter(static fn(UntrustedValue $tag): bool => $tag->string(false) !== '')
-            ->count(10, 1);
+            ->filter(static fn(UntrustedValue $tag): bool => $tag->string(false) !== '');
 
+        self::assertSame($tags, $tags->count(10, 1));
         self::assertSame(['a', 'b'], $tags->listString(false));
         self::assertSame(['tags.0', 'tags.2'], array_map(static fn(UntrustedValue $tag): string => $tag->path, $tags->list()));
     }
@@ -110,5 +110,18 @@ final class CountTest extends TestCase
     {
         $this->expectExceptionMessage('Expected at most 1 item at tags');
         new UntrustedValue([1, 2], 'tags')->count(1);
+    }
+
+    public function testCollectsABareGeneratorSoItCanStillBeUsed(): void
+    {
+        $generator = (static function (): \Generator {
+            yield 'a' => 1;
+            yield 'b' => 2;
+        })();
+
+        $counted = new UntrustedValue($generator, 'n')->count(2, 2);
+
+        self::assertSame(['a' => 1, 'b' => 2], $counted->value);
+        self::assertSame([1, 2], $counted->listInt(false));
     }
 }

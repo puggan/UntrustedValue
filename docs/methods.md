@@ -46,7 +46,9 @@ raw value out of `$untrusted`.
 
 **Laziness.** Methods starting with `yield`, and `filter()`, `filterValid()` and `map()`, are lazy:
 the value is checked when you call them, but items are converted, and callbacks run, while
-iterating. The result can only be iterated once, as it is a generator.
+iterating. A `yield…()` method returns a plain generator, which can be iterated once. `filter()`,
+`filterValid()` and `map()` return a value holding a `LazyIterable`, which starts over each time it
+is iterated, so the value stays as immutable as any other; the callbacks run again each time.
 
 **PHPStan.** The wrapped type is a template, `UntrustedValue<TValue>`, inferred from the
 constructor and narrowed along the chain: after `->requireList(false)` it is a `list<mixed>`, after
@@ -143,7 +145,8 @@ missing, the same as `property()`.
 $age = $user->property('age')->asInt(false)->range(0, 150)->int();
 ```
 
-Reading an iterator with `asList()` or `asArray()` uses it up. Only public properties are ever read
+Reading a bare generator with `asList()` or `asArray()` uses it up, as a generator can only be
+iterated once. Only public properties are ever read
 from objects, so protected and private ones never leak out.
 
 ## Validate
@@ -202,7 +205,7 @@ gives no items unless `$nullable` is false.
 
 ## Filter and map
 
-`filter()`, `filterValid()` and `map()` return a new object holding a lazy generator, so they chain,
+`filter()`, `filterValid()` and `map()` return a new object holding a `LazyIterable`, so they chain,
 and the items keep their paths:
 
 ```php

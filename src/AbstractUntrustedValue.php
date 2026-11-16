@@ -189,7 +189,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
 
     /**
      * Returns the raw value, unchanged and unchecked. For a filter() or map() result, that is the
-     * generator of wrapped items.
+     * LazyIterable of wrapped items.
      *
      * @return TValue
      */
@@ -823,10 +823,10 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      * means no upper limit. Arrays and Countable objects are counted with count(), and other
      * objects by their public properties. Null has no count to check, so it passes.
      *
-     * Counting a generator or other iterator that is not Countable uses it up, so for those the
-     * items are first collected into an array (keys must be int or string), and a new object of the
-     * same class and path holding that array is returned. Items that already are untrusted values,
-     * as from filter() or map(), keep their own paths.
+     * A bare generator can only be iterated once, so counting one would use it up: its items are
+     * first collected into an array (keys must be int or string), and a new object of the same class
+     * and path holding that array is returned. Other iterators, like filter() and map() results, are
+     * counted by iterating them, and this object is returned.
      *
      * @return $this|static<array<array-key, mixed>>
      *
@@ -842,10 +842,13 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         $counted = $this;
         if (is_array($this->value) || $this->value instanceof \Countable) {
             $count = count($this->value);
-        } elseif ($this->value instanceof \Traversable) {
+        } elseif ($this->value instanceof \Generator) {
+            // A generator can only be iterated once, so keep its items for whatever comes next.
             $items = $this->traversableToArray($this->value);
             $counted = new static($items, $this->path);
             $count = count($items);
+        } elseif ($this->value instanceof \Traversable) {
+            $count = iterator_count($this->value);
         } elseif (is_object($this->value)) {
             $count = count(get_object_vars($this->value));
         } else {
@@ -1169,7 +1172,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * A new object of the same class and path, holding a generator of the items of yieldArray()
+     * A new object of the same class and path, holding a LazyIterable of the items of yieldArray()
      * that $callback keeps. Calls $callback($item, $key) for each one: $item is the item, wrapped
      * in this class with its own path, and $key its original key, which an iterator can make any
      * type. An item is kept when $callback returns true; an exception it throws comes through.
@@ -1177,17 +1180,24 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      * The result can be chained: iterating it, or calling list(), listInt(), map() and the like on
      * it, gives the kept items with their own paths, so errors still point into the original input.
      * asList() on the result numbers them 0, 1, 2. The value is checked when this is called;
-     * $callback runs when the result is iterated, which can only happen once. Null gives no items.
+     * $callback runs when the result is iterated, again for each iteration, as a LazyIterable starts
+     * over each time rather than being used up like a generator. Null gives no items.
      *
      * @param callable(static<mixed>, mixed): bool $callback
      *
-     * @return static<\Generator<mixed, static<mixed>, mixed, void>>
+     * @return static<LazyIterable<mixed, static<mixed>>>
      *
      * @throws WrongTypeException When yieldArray() throws.
      */
     public function filter(callable $callback): static
     {
-        return new static($this->filterItems($this->yieldArray(), $callback), $this->path);
+        // Check the value now, as yieldArray() would, rather than on first iteration.
+        $this->iterable('array', true);
+
+        // A full closure, not fn() =>: PHPStan misreads an arrow function that returns a generator.
+        return new static(new LazyIterable(function () use ($callback): \Generator {
+            return $this->filterItems($this->yieldArray(), $callback);
+        }), $this->path);
     }
 
     /**
@@ -1203,7 +1213,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      *
      * @param callable(static<mixed>, mixed): mixed $validator
      *
-     * @return static<\Generator<mixed, static<mixed>, mixed, void>>
+     * @return static<LazyIterable<mixed, static<mixed>>>
      *
      * @throws WrongTypeException When yieldArray() throws.
      */
@@ -1221,7 +1231,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * A new object of the same class and path, holding a generator of $mapper's result for each
+     * A new object of the same class and path, holding a LazyIterable of $mapper's result for each
      * item of yieldArray(), with the original keys. Calls $mapper($item, $key) for each one: $item
      * is the item, wrapped in this class with its own path, and $key its original key, which an
      * iterator can make any type. A plain result is wrapped with the item's path; an untrusted
@@ -1231,19 +1241,26 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      * The result can be chained like filter()'s: iterating it, or calling list(), listInt(),
      * filter() and the like on it, gives each result with its path, and the class of the new object
      * decides strictness from then on. The value is checked when this is called; $mapper runs when
-     * the result is iterated, which can only happen once. Null gives no items.
+     * the result is iterated, again for each iteration, as a LazyIterable starts over each time.
+     * Null gives no items.
      *
      * @template TResult
      *
      * @param callable(static<mixed>, mixed): TResult $mapper
      *
-     * @return static<\Generator<mixed, (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>), mixed, void>>
+     * @return static<LazyIterable<mixed, (TResult is AbstractUntrustedValue<mixed> ? TResult : static<TResult>)>>
      *
      * @throws WrongTypeException When yieldArray() throws.
      */
     public function map(callable $mapper): static
     {
-        return new static($this->mapItems($this->yieldArray(), $mapper), $this->path);
+        // Check the value now, as yieldArray() would, rather than on first iteration.
+        $this->iterable('array', true);
+
+        // A full closure, not fn() =>: PHPStan misreads an arrow function that returns a generator.
+        return new static(new LazyIterable(function () use ($mapper): \Generator {
+            return $this->mapItems($this->yieldArray(), $mapper);
+        }), $this->path);
     }
 
     /**
@@ -1633,7 +1650,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
-     * Serializes to the raw value, unchanged. A filter() or map() result holds a generator, which
+     * Serializes to the raw value, unchanged. A filter() or map() result holds a LazyIterable, which
      * json_encode() turns into {}; collect it with list() first.
      *
      * @return TValue

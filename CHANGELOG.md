@@ -4,6 +4,27 @@ All notable changes to this project. The format follows [Keep a Changelog](https
 and the project uses [semantic versioning](https://semver.org/); before 1.0, a minor version can
 change behaviour.
 
+## [Unreleased]
+
+### Fixed
+
+- `filter()`, `filterValid()` and `map()` results could only be iterated once, as they held a bare
+  generator: a second `list()`, or `count()` after `isList()`, threw "Cannot traverse an already
+  closed generator". They now hold a `LazyIterable`, which starts a new generator each time it is
+  iterated, so the results are as immutable as every other value. The callbacks run again for each
+  iteration.
+
+### Added
+
+- `LazyIterable`, an immutable, repeatable lazy sequence: an `IteratorAggregate` around a factory
+  that returns a new generator for each iteration.
+
+### Changed
+
+- `count()` only collects a bare generator into a new array value. Other iterators, like
+  `filter()` and `map()` results, are counted by iterating them, and `count()` returns the same
+  object.
+
 ## [0.2.0] - 2026-11-10
 
 ### Added
@@ -70,6 +91,7 @@ The first release.
   JSON.
 - A PHPStan template, `UntrustedValue<TValue>`, narrowed along the chain.
 
+[Unreleased]: https://github.com/puggan/UntrustedValue/compare/v0.2.0...main
 [0.2.0]: https://github.com/puggan/UntrustedValue/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/puggan/UntrustedValue/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/puggan/UntrustedValue/releases/tag/v0.1.0

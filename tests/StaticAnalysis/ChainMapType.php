@@ -17,7 +17,7 @@ use Puggan\UntrustedValue\UntrustedValue;
  */
 function chainMapType(UntrustedValue $loose, UntrustedStrictValue $strict): void
 {
-    assertType('Puggan\UntrustedValue\UntrustedValue<Generator<mixed, Puggan\UntrustedValue\UntrustedValue<int>, mixed, void>>', $loose->map(static fn(UntrustedValue $item): int => 1));
-    assertType('Puggan\UntrustedValue\UntrustedStrictValue<Generator<mixed, Puggan\UntrustedValue\UntrustedStrictValue<int>, mixed, void>>', $strict->map(static fn(UntrustedStrictValue $item) => $item->asInt(false)));
+    assertType('Puggan\UntrustedValue\UntrustedValue<Puggan\UntrustedValue\LazyIterable<mixed, Puggan\UntrustedValue\UntrustedValue<int>>>', $loose->map(static fn(UntrustedValue $item): int => 1));
+    assertType('Puggan\UntrustedValue\UntrustedStrictValue<Puggan\UntrustedValue\LazyIterable<mixed, Puggan\UntrustedValue\UntrustedStrictValue<int>>>', $strict->map(static fn(UntrustedStrictValue $item) => $item->asInt(false)));
     assertType('list<int>', $loose->map(static fn(UntrustedValue $item): int => 1)->filter(static fn(UntrustedValue $item): bool => true)->listInt(false));
 }
