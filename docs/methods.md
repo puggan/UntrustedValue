@@ -59,7 +59,7 @@ constructor and narrowed along the chain: after `->requireList(false)` it is a `
 
 | Method | Does |
 |---|---|
-| `new UntrustedValue($value, string $path = '')` | Wraps `$value`. An untrusted value passed in is unwrapped. |
+| `new UntrustedValue($value, string $path = '')` | Wraps `$value`. An untrusted value passed in is unwrapped, and a generator is cached so it can be iterated more than once. |
 | `new UntrustedStrictValue($value, string $path = '')` | The same, strict. |
 | `UntrustedValue::fromJson(string $json)` | Decodes JSON, with objects as `\stdClass`, at the root path. Works on either class. |
 
@@ -145,8 +145,9 @@ missing, the same as `property()`.
 $age = $user->property('age')->asInt(false)->range(0, 150)->int();
 ```
 
-Reading a bare generator with `asList()` or `asArray()` uses it up, as a generator can only be
-iterated once. Only public properties are ever read
+A generator passed to the constructor is wrapped in a `CachedIterable`, which reads it lazily, at
+most once, and replays it, so reading it with `asList()`, `count()` or anything else doesn't use it
+up. An infinite generator works as long as something like `slice()` stops reading. Only public properties are ever read
 from objects, so protected and private ones never leak out.
 
 ## Validate

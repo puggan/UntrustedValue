@@ -27,6 +27,11 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      * value is never wrapped twice; the path is still the one given here, and the class is the one
      * constructed, so new UntrustedStrictValue($loose) makes a strict value.
      *
+     * A bare generator can only be iterated once, so it is wrapped in a CachedIterable, which reads
+     * it lazily and replays it, keeping this value repeatable like any other. TValue still says
+     * Generator then, while raw() returns the CachedIterable: the same keys and items, but without
+     * generator-only methods like send() or getReturn().
+     *
      * $value is not a promoted property, as a promoted readonly property is assigned before the
      * constructor body could unwrap it.
      *
@@ -37,7 +42,12 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         mixed $value,
         public readonly string $path = '',
     ) {
-        $this->value = $value instanceof self ? $value->value : $value;
+        if ($value instanceof self) {
+            $value = $value->value;
+        }
+
+        // A bare generator can only be iterated once; cache it so this value stays repeatable.
+        $this->value = $value instanceof \Generator ? new CachedIterable($value) : $value;
     }
 
     /**
@@ -189,7 +199,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
 
     /**
      * Returns the raw value, unchanged and unchecked. For a filter() or map() result, that is the
-     * LazyIterable of wrapped items.
+     * LazyIterable of wrapped items, and for a generator given to the constructor, the
+     * CachedIterable around it.
      *
      * @return TValue
      */
@@ -823,14 +834,12 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
      * means no upper limit. Arrays and Countable objects are counted with count(), and other
      * objects by their public properties. Null has no count to check, so it passes.
      *
-     * A bare generator can only be iterated once, so counting one would use it up: its items are
-     * first collected into an array (keys must be int or string), and a new object of the same class
-     * and path holding that array is returned. Other iterators, like filter() and map() results, are
-     * counted by iterating them, and this object is returned.
+     * Iterators are counted by iterating them; a generator given to the constructor is cached, so
+     * counting it doesn't use it up.
      *
-     * @return $this|static<array<array-key, mixed>>
+     * @return $this
      *
-     * @throws WrongTypeException When the value is neither an array nor an object, or an iterator yields a key that is not an int or string.
+     * @throws WrongTypeException When the value is neither an array nor an object.
      * @throws InvalidTypeException When there are fewer than $min or more than $max items.
      */
     public function count(?int $max = null, int $min = 0): static
@@ -839,14 +848,8 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
             return $this;
         }
 
-        $counted = $this;
         if (is_array($this->value) || $this->value instanceof \Countable) {
             $count = count($this->value);
-        } elseif ($this->value instanceof \Generator) {
-            // A generator can only be iterated once, so keep its items for whatever comes next.
-            $items = $this->traversableToArray($this->value);
-            $counted = new static($items, $this->path);
-            $count = count($items);
         } elseif ($this->value instanceof \Traversable) {
             $count = iterator_count($this->value);
         } elseif (is_object($this->value)) {
@@ -863,7 +866,7 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
             throw $this->invalid('maxCount', sprintf('at most %d %s', $max, $max === 1 ? 'item' : 'items'));
         }
 
-        return $counted;
+        return $this;
     }
 
     /**

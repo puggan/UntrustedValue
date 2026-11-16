@@ -112,16 +112,16 @@ final class CountTest extends TestCase
         new UntrustedValue([1, 2], 'tags')->count(1);
     }
 
-    public function testCollectsABareGeneratorSoItCanStillBeUsed(): void
+    public function testCountsAGeneratorWithoutUsingItUp(): void
     {
         $generator = (static function (): \Generator {
             yield 'a' => 1;
             yield 'b' => 2;
         })();
+        $untrusted = new UntrustedValue($generator, 'n');
 
-        $counted = new UntrustedValue($generator, 'n')->count(2, 2);
-
-        self::assertSame(['a' => 1, 'b' => 2], $counted->value);
-        self::assertSame([1, 2], $counted->listInt(false));
+        self::assertSame($untrusted, $untrusted->count(2, 2));
+        self::assertSame([1, 2], $untrusted->listInt(false));
+        self::assertSame(['a' => 1, 'b' => 2], $untrusted->arrayInt(false));
     }
 }

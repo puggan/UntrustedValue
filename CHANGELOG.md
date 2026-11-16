@@ -13,9 +13,14 @@ change behaviour.
   closed generator". They now hold a `LazyIterable`, which starts a new generator each time it is
   iterated, so the results are as immutable as every other value. The callbacks run again for each
   iteration.
+- `new UntrustedValue($generator)` gave a value that could only be iterated once. The generator is
+  now cached, see `CachedIterable` below.
 
 ### Added
 
+- `CachedIterable`, which the constructor now wraps around a bare generator: it reads the generator
+  lazily, at most once, and replays it, so a value made from a generator can be iterated more than
+  once, even when the generator is infinite. What has been read stays in memory.
 - `slice($offset, $length)`, like `array_slice()` but lazy, so it stops reading as soon as it has
   enough items and also works on an infinite source. It chains like `filter()` and `map()`.
 - `LazyIterable`, an immutable, repeatable lazy sequence: an `IteratorAggregate` around a factory
@@ -23,9 +28,9 @@ change behaviour.
 
 ### Changed
 
-- `count()` only collects a bare generator into a new array value. Other iterators, like
-  `filter()` and `map()` results, are counted by iterating them, and `count()` returns the same
-  object.
+- `count()` always returns the same object. It used to collect an iterator into a new array value,
+  so the iterator wasn't used up; with generators now cached, iterators are counted by iterating
+  them.
 
 ## [0.2.0] - 2026-11-10
 
