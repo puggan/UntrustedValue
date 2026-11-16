@@ -205,7 +205,7 @@ gives no items unless `$nullable` is false.
 
 ## Filter and map
 
-`filter()`, `filterValid()` and `map()` return a new object holding a `LazyIterable`, so they chain,
+`filter()`, `filterValid()`, `map()` and `slice()` return a new object holding a `LazyIterable`, so they chain,
 and the items keep their paths:
 
 ```php
@@ -221,6 +221,7 @@ $names = $users
 | `filter(callable $callback)` | `$callback($item, $key): bool` | the items it returns true for |
 | `filterValid(callable $validator)` | `$validator($item, $key)`, return value ignored | the items it doesn't throw an `UntrustedValueException` for; other exceptions come through |
 | `map(callable $mapper)` | `$mapper($item, $key): mixed` | its results |
+| `slice(int $offset, ?int $length = null)` | none | like `array_slice()`, but lazy, so it also works on an infinite source; no negative values |
 
 The other map methods collect or yield right away instead of chaining. "Wrapped" means a plain
 result is wrapped with the item's path, while an untrusted result is kept as it is:

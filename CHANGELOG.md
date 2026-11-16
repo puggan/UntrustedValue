@@ -16,6 +16,8 @@ change behaviour.
 
 ### Added
 
+- `slice($offset, $length)`, like `array_slice()` but lazy, so it stops reading as soon as it has
+  enough items and also works on an infinite source. It chains like `filter()` and `map()`.
 - `LazyIterable`, an immutable, repeatable lazy sequence: an `IteratorAggregate` around a factory
   that returns a new generator for each iteration.
 

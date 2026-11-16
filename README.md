@@ -125,7 +125,7 @@ strict value are strict too, and `asStrict()` and `asLoose()` switch between the
 | [Validate](https://github.com/puggan/UntrustedValue/blob/main/docs/methods.md#validate) | `range()`, `length()`, `count()`, `oneOf()`, `match()`, `notMatch()` |
 | [Change](https://github.com/puggan/UntrustedValue/blob/main/docs/methods.md#change) | `trim()`, `replace()`, `default()`, `blankDefault()`, `split()`, `csv()` |
 | [Read nested values](https://github.com/puggan/UntrustedValue/blob/main/docs/methods.md#read-nested-values) | `property()`, `list()`, `array()`, `yieldList()`, `yieldArray()`, `foreach` |
-| [Filter and map](https://github.com/puggan/UntrustedValue/blob/main/docs/methods.md#filter-and-map) | `filter()`, `filterValid()`, `map()`, and `listMap()`, `listRawMap()`, `yieldFlatMap()` and the like |
+| [Filter and map](https://github.com/puggan/UntrustedValue/blob/main/docs/methods.md#filter-and-map) | `filter()`, `filterValid()`, `map()`, `slice()`, and `listMap()`, `listRawMap()`, `yieldFlatMap()` and the like |
 | [Typed collections](https://github.com/puggan/UntrustedValue/blob/main/docs/methods.md#typed-collections) | `listInt()`, `arrayString()`, `yieldBool()` and the like |
 
 Most methods take `bool $nullable = true`, so null passes through unless you say otherwise. The

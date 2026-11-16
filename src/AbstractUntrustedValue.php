@@ -1231,6 +1231,37 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
     }
 
     /**
+     * A new object of the same class and path, holding a LazyIterable of the items of yieldArray()
+     * from position $offset, at most $length of them, or all the rest when $length is null. Like
+     * array_slice(), but lazy: it stops reading as soon as it has $length items, so it also works on
+     * an infinite source. The items keep their original keys and paths, so errors still point into
+     * the original input; asList() on the result numbers them 0, 1, 2.
+     *
+     * Unlike array_slice(), negative values are not allowed: counting from the end needs the whole
+     * sequence, which an infinite source never has. The result can be chained like filter()'s, and
+     * iterated any number of times. Null gives no items.
+     *
+     * @return static<LazyIterable<mixed, static<mixed>>>
+     *
+     * @throws WrongTypeException When yieldArray() throws.
+     * @throws \InvalidArgumentException When $offset or $length is negative.
+     */
+    public function slice(int $offset, ?int $length = null): static
+    {
+        if ($offset < 0 || ($length !== null && $length < 0)) {
+            throw new \InvalidArgumentException(sprintf('slice() needs a non-negative offset and length, got %d and %s', $offset, $length === null ? 'null' : (string) $length));
+        }
+
+        // Check the value now, as yieldArray() would, rather than on first iteration.
+        $this->iterable('array', true);
+
+        // A full closure, not fn() =>: PHPStan misreads an arrow function that returns a generator.
+        return new static(new LazyIterable(function () use ($offset, $length): \Generator {
+            return $this->sliceItems($this->yieldArray(), $offset, $length);
+        }), $this->path);
+    }
+
+    /**
      * A new object of the same class and path, holding a LazyIterable of $mapper's result for each
      * item of yieldArray(), with the original keys. Calls $mapper($item, $key) for each one: $item
      * is the item, wrapped in this class with its own path, and $key its original key, which an
@@ -1730,6 +1761,35 @@ abstract class AbstractUntrustedValue implements \IteratorAggregate, \JsonSerial
         foreach ($items as $key => $item) {
             if ($callback($item, $key)) {
                 yield $key => $item;
+            }
+        }
+    }
+
+    /**
+     * The items from position $offset, at most $length of them, with their keys. It stops as soon as
+     * it has $length items, without reading the next one.
+     *
+     * @param \Generator<mixed, static<mixed>, mixed, void> $items
+     *
+     * @return \Generator<mixed, static<mixed>, mixed, void>
+     */
+    private function sliceItems(\Generator $items, int $offset, ?int $length): \Generator
+    {
+        if ($length === 0) {
+            return;
+        }
+
+        $position = 0;
+        $taken = 0;
+        foreach ($items as $key => $item) {
+            if ($position++ < $offset) {
+                continue;
+            }
+
+            yield $key => $item;
+
+            if ($length !== null && ++$taken >= $length) {
+                return;
             }
         }
     }
